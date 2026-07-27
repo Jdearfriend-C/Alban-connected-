@@ -12,7 +12,7 @@
 <style>
   :root{
     --paper:#E4E7EA; --card:#EDEFF1; --ink:#182028; --graphite:#5C6670;
-    --rule:#C7CDD2; --couche:#2E8B94; --biberon:#E08A2B; --signal:#FF5B3D;
+    --rule:#C7CDD2; --sunk:#D3D9DD; --couche:#2E8B94; --biberon:#E08A2B; --signal:#FF5B3D;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;overscroll-behavior:none}
@@ -63,7 +63,7 @@
   .npill:active{background:var(--ink);color:var(--paper)}
   .npill .lbl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--graphite)}
   .npill.couche .lbl{color:var(--couche)}
-  .npill.biberon .lbl{color:var(--biberon)}
+  .npill.biberon .lbl,.npill.manger .lbl{color:var(--biberon)}
   .npill .t{font-size:26px;font-weight:500;letter-spacing:-.02em;margin-top:3px;display:block}
   .npill .d{font-size:11px;color:var(--graphite);letter-spacing:.04em}
   .npill.due{border-style:solid;border-color:var(--signal)}
@@ -81,7 +81,7 @@
   .log-btn .n{font-size:22px;font-weight:600;letter-spacing:.02em}
   .log-btn .s{font-size:11px;letter-spacing:.16em;text-transform:uppercase;opacity:.85;display:block;margin-top:4px}
   .b-couche{background:var(--couche)}
-  .b-biberon{background:var(--biberon)}
+  .b-biberon,.b-manger{background:var(--biberon)}
   .b-both{
     background:none;border:1px dashed var(--rule);color:var(--graphite);
     padding:13px 10px;text-align:center;position:relative;
@@ -109,11 +109,13 @@
   .row:active{background:var(--card)}
   .dot{width:8px;height:8px;border-radius:50%;flex:none;align-self:center}
   .dot.couche{background:var(--couche)}
+  .dot.manger{background:var(--biberon)}
   .dot.biberon{background:var(--biberon)}
   .hm{font-size:19px;font-weight:500;min-width:62px}
   .sec2{font-size:11px;color:var(--graphite);margin-left:-6px}
-  .kind{font-size:13px;letter-spacing:.04em}
-  .day{margin-left:auto;font-size:12px;color:var(--graphite)}
+  .kind{font-size:13px;letter-spacing:.04em;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .kind i{font-style:normal;color:var(--graphite)}
+  .day{font-size:12px;color:var(--graphite);flex:none}
   .edit{font-size:11px;color:var(--rule);letter-spacing:.1em;padding-left:8px}
   .empty{padding:22px 0;color:var(--graphite);font-size:14px}
   .del{background:none;border:none;color:var(--rule);font:inherit;font-size:16px;padding:0 0 0 10px;cursor:pointer}
@@ -186,9 +188,11 @@
   #sheet.open{display:flex}
   #sheetbox{
     width:100%;background:var(--paper);border-top:2px solid var(--ink);
+    border-radius:8px 8px 0 0;
+    max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
     padding:20px 20px calc(20px + env(safe-area-inset-bottom));
   }
-  #sheetbox h3{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);font-weight:600;margin-bottom:14px}
+  #sheetbox h3{font-size:20px;letter-spacing:-.01em;color:var(--ink);font-weight:600;margin-bottom:16px}
   .sline{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
   #eTime{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:12px;font:inherit;font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums}
   .quick{background:none;border:1px solid var(--rule);border-radius:8px;font:inherit;font-size:13px;padding:10px 11px;cursor:pointer;color:var(--ink)}
@@ -199,7 +203,35 @@
   .seg2 button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
   .kchip{flex:1;border:1px solid var(--rule);background:var(--card);border-radius:8px;font:inherit;font-size:14px;padding:11px 6px;cursor:pointer;color:var(--graphite)}
   .kchip[aria-pressed="true"][data-k="couche"]{background:var(--couche);border-color:var(--couche);color:#fff}
-  .kchip[aria-pressed="true"][data-k="biberon"]{background:var(--biberon);border-color:var(--biberon);color:#fff}
+  .kchip[aria-pressed="true"][data-k="manger"]{background:var(--biberon);border-color:var(--biberon);color:#fff}
+  .slab{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);margin:0 0 8px}
+  .dchip,.mchip{
+    flex:1;border:1.5px solid var(--rule);background:var(--card);border-radius:8px;font:inherit;
+    font-size:17px;font-weight:500;padding:19px 6px;cursor:pointer;color:var(--ink);
+  }
+  .dchip:active,.mchip:active{border-color:var(--ink)}
+  .dchip[aria-pressed="true"]{background:var(--couche);border-color:var(--couche);color:#fff}
+  .mchip[aria-pressed="true"]{background:var(--biberon);border-color:var(--biberon);color:#fff}
+  #eMl{
+    flex:1;min-width:0;text-align:center;background:var(--card);border:1px solid var(--rule);
+    border-radius:8px;padding:12px;font-family:"Roboto Mono",ui-monospace,monospace;
+    font-size:22px;color:var(--ink);
+  }
+  .unit{font-size:13px;color:var(--graphite);letter-spacing:.1em}
+  #eCouche,#eMeal{margin-bottom:18px}
+  .mlline{margin-top:10px}
+  /* bloc date & heure : secondaire, regroupé, en creux */
+  #eWhen{
+    background:var(--sunk);border-radius:8px;padding:12px 12px 4px;margin-bottom:4px;
+  }
+  #eWhen .sline{margin-bottom:10px}
+  #eWhen #eTime{background:var(--paper);border-color:transparent;font-size:19px}
+  #eWhen .quick{border-color:var(--rule);background:none;font-size:12px;padding:9px 8px}
+  #eWhen .seg2{border-color:var(--rule)}
+  #eWhen .seg2 button{background:var(--paper);font-size:12px}
+  #eWhen .seg2 button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  #ver{margin-left:auto;opacity:.6;letter-spacing:.1em}
+  #noteState{margin-left:0}
   .sactions{display:flex;gap:8px;margin-top:18px}
   .sactions button{flex:1;border:none;border-radius:8px;font:inherit;font-size:13px;letter-spacing:.14em;text-transform:uppercase;padding:14px 6px;cursor:pointer}
   #eSave{background:var(--ink);color:var(--paper);flex:2}
@@ -229,7 +261,7 @@
     <div class="logcard">
       <div class="grid">
         <button class="log-btn b-couche" data-kind="couche"><span class="n">Couche</span><span class="s" id="hCouche"></span></button>
-        <button class="log-btn b-biberon" data-kind="biberon"><span class="n">Biberon</span><span class="s" id="hBiberon"></span></button>
+        <button class="log-btn b-manger" data-kind="manger"><span class="n">Manger</span><span class="s" id="hManger"></span></button>
       </div>
       <button class="log-btn b-both" data-kind="both"><span class="n">Les deux</span><span class="s">Une seule entrée</span></button>
     </div>
@@ -281,6 +313,7 @@
       <button id="noteClear">Effacer</button>
       <span id="noteCount"></span>
       <span id="noteState"></span>
+      <span id="ver"></span>
     </div>
   </section>
 </main>
@@ -288,17 +321,44 @@
 <div id="sheet" role="dialog" aria-modal="true">
   <div id="sheetbox">
     <h3 id="eTitle">Modifier l'entrée</h3>
-    <div class="sline">
-      <input type="time" id="eTime" step="60">
-      <button class="quick" data-adj="-5">−5 min</button>
-      <button class="quick" data-adj="-15">−15</button>
-      <button class="quick" data-adj="-30">−30</button>
-    </div>
-    <div class="sline"><div class="seg2" id="eDay"></div></div>
+
     <div class="sline" id="eKinds">
       <button class="kchip" data-k="couche">Couche</button>
-      <button class="kchip" data-k="biberon">Biberon</button>
+      <button class="kchip" data-k="manger">Manger</button>
     </div>
+
+    <div id="eCouche">
+      <div class="sline">
+        <button class="dchip" data-c="pipi">Pipi</button>
+        <button class="dchip" data-c="caca">Caca</button>
+        <button class="dchip" data-c="both">Les deux</button>
+      </div>
+    </div>
+
+    <div id="eMeal">
+      <div class="sline">
+        <button class="mchip" data-m="biberon">Biberon</button>
+        <button class="mchip" data-m="sein">Sein</button>
+      </div>
+      <div class="sline mlline">
+        <button class="quick" data-ml="-10">−10</button>
+        <input id="eMl" type="number" inputmode="numeric" min="0" step="5">
+        <span class="unit">ml</span>
+        <button class="quick" data-ml="10">+10</button>
+      </div>
+    </div>
+
+    <div id="eWhen">
+      <div class="slab">Quand</div>
+      <div class="sline">
+        <input type="time" id="eTime" step="60">
+        <button class="quick" data-adj="-5">−5 min</button>
+        <button class="quick" data-adj="-15">−15</button>
+        <button class="quick" data-adj="-30">−30</button>
+      </div>
+      <div class="sline"><div class="seg2" id="eDay"></div></div>
+    </div>
+
     <div class="sactions">
       <button id="eCancel">Annuler</button>
       <button id="eDelete">Supprimer</button>
@@ -328,10 +388,18 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   let db={entries:[],tasks:[],notes:[],iv:3};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
+  const VERSION="1.7";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
-  db.entries.forEach(e=>{e.id=String(e.id||uid());});
+  function normalize(e){
+    e.id=String(e.id||uid());
+    e.kinds=(e.kinds||[]).map(k=>k==="biberon"?"manger":k);
+    e.couche=Array.isArray(e.couche)?e.couche:[];
+    if(e.kinds.includes("manger")&&!e.meal) e.meal={type:"biberon",ml:null};
+    return e;
+  }
+  db.entries.forEach(normalize);
   db.tasks.forEach(t=>{t.id=String(t.id||uid());});
   if(!Array.isArray(db.notes))db.notes=[];
   const saveLocal=()=>store.set(JSON.stringify(db));
@@ -381,19 +449,20 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     return null;
   }
 
-  let guard=0; // anti-doublon : ignore un second déclenchement immédiat
-  function addEntry(kinds){
-    const now=Date.now();
-    if(now-guard<1200) return;
-    guard=now;
-    const e={id:uid(),ts:now,kinds:kinds.slice()};
-    db.entries.push(e); putEntry(e); renderTab1();
-    if(navigator.vibrate)navigator.vibrate(12);
+  function entryLabel(e){
+    const out=[];
+    if(e.kinds.includes("couche"))
+      out.push("Couche"+(e.couche.length?' <i>· '+e.couche.join(" + ")+'</i>':""));
+    if(e.kinds.includes("manger"))
+      out.push((e.meal&&e.meal.type==="sein"?"Sein":"Biberon")+
+               (e.meal&&e.meal.ml?' <i>· '+e.meal.ml+' ml</i>':""));
+    return out.join(" + ");
   }
 
+  let guard=0; // anti-doublon : ignore un second déclenchement immédiat
   function renderNext(){
     const box=$("#next"); box.innerHTML="";
-    [["couche","Prochaine couche"],["biberon","Prochain biberon"]].forEach(([k,lbl])=>{
+    [["couche","Prochaine couche"],["manger","Prochain repas"]].forEach(([k,lbl])=>{
       const last=lastOf(k);
       const b=document.createElement("button");
       b.className="npill "+k; b.type="button";
@@ -405,23 +474,23 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
         b.innerHTML='<span class="lbl">'+lbl+'</span><span class="t mono">'+hm(nxt)+'</span>'+
                     '<span class="d">'+dayLabel(nxt)+' · '+delta(nxt)+'</span>';
       }
-      b.addEventListener("click",()=>addEntry([k]));
+      b.addEventListener("click",()=>openCompose([k]));
       box.appendChild(b);
     });
-    const lc=lastOf("couche"), lb=lastOf("biberon");
+    const lc=lastOf("couche"), lb=lastOf("manger");
     $("#hCouche").textContent=lc?"dernière "+hm(lc):"aucune";
-    $("#hBiberon").textContent=lb?"dernier "+hm(lb):"aucun";
+    $("#hManger").textContent=lb?"dernier "+hm(lb):"aucun";
   }
 
   function renderLog(){
     const el=$("#log"), list=sorted().reverse();
-    if(!list.length){el.innerHTML='<div class="empty">Aucune entrée. Touchez Couche ou Biberon.</div>';return;}
+    if(!list.length){el.innerHTML='<div class="empty">Aucune entrée. Touchez Couche ou Manger.</div>';return;}
     el.innerHTML=list.map(e=>
       '<div class="row" data-id="'+e.id+'">'+
       e.kinds.map(k=>'<span class="dot '+k+'"></span>').join("")+
       '<span class="hm mono">'+hm(e.ts)+'</span><span class="sec2 mono">:'+sc(e.ts)+'</span>'+
-      '<span class="kind">'+e.kinds.map(k=>k==="couche"?"Couche":"Biberon").join(" + ")+'</span>'+
-      '<span class="day">'+dayLabel(e.ts)+'</span><span class="edit">modifier</span></div>').join("");
+      '<span class="kind">'+entryLabel(e)+'</span>'+
+      '<span class="day">'+dayLabel(e.ts)+'</span></div>').join("");
     el.querySelectorAll(".row").forEach(r=>r.addEventListener("click",()=>openSheet(r.dataset.id)));
   }
 
@@ -432,12 +501,26 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   }
 
   $$(".log-btn").forEach(b=>b.addEventListener("click",()=>
-    addEntry(b.dataset.kind==="both"?["couche","biberon"]:[b.dataset.kind])));
+    openCompose(b.dataset.kind==="both"?["couche","manger"]:[b.dataset.kind])));
   $$("[data-iv]").forEach(b=>b.addEventListener("click",()=>{db.iv=+b.dataset.iv;putIv(db.iv);renderTab1();}));
 
   /* ---------- feuille d'édition ---------- */
   let editing=null;          // {type:'entry'|'task', id}
   let eKinds=[], eDayOffset=0, eBase=null;
+  let eCouche=[], eMeal={type:"biberon",ml:20};
+
+  function paintDetails(){
+    const hasC=eKinds.includes("couche"), hasM=eKinds.includes("manger");
+    $("#eCouche").style.display=hasC?"":"none";
+    $("#eMeal").style.display=hasM?"":"none";
+    $$(".dchip").forEach(c=>{
+      const k=c.dataset.c;
+      const on = k==="both" ? (eCouche.length===2) : (eCouche.length===1 && eCouche[0]===k);
+      c.setAttribute("aria-pressed",on);
+    });
+    $$(".mchip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.m===eMeal.type));
+    $("#eMl").value = eMeal.ml==null ? "" : eMeal.ml;
+  }
 
   function dayOptions(sel){
     const box=$("#eDay"); box.innerHTML="";
@@ -449,16 +532,36 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     });
   }
 
+  function openCompose(kinds){
+    const now=Date.now();
+    if(now-guard<600) return;
+    guard=now;
+    editing={type:"entry",id:null,mode:"compose"};
+    eKinds=kinds.slice(); eCouche=[]; eMeal={type:"biberon",ml:20};
+    eDayOffset=0; eBase=now;
+    $("#eTitle").textContent = kinds.length>1 ? "Couche + repas"
+                             : kinds[0]==="couche" ? "Couche" : "Repas";
+    $("#eTime").value=toTimeInput(now);
+    dayOptions(0);
+    $("#eKinds").style.display="none";
+    $("#eDelete").style.display="none";
+    paintDetails();
+    $("#sheet").classList.add("open");
+  }
+
   function openSheet(id){
     const e=db.entries.find(x=>x.id===id); if(!e)return;
-    editing={type:"entry",id};
+    editing={type:"entry",id,mode:"edit"};
     eBase=e.ts; eKinds=e.kinds.slice();
+    eCouche=(e.couche||[]).slice();
+    eMeal={type:(e.meal&&e.meal.type)||"biberon",ml:(e.meal&&e.meal.ml!=null)?e.meal.ml:null};
     eDayOffset=-Math.round((sod(new Date())-sod(new Date(e.ts)))/864e5);
     $("#eTitle").textContent="Modifier l'entrée";
     $("#eTime").value=toTimeInput(e.ts);
     dayOptions(eDayOffset);
     $("#eKinds").style.display="";
     $$(".kchip").forEach(c=>c.setAttribute("aria-pressed",eKinds.includes(c.dataset.k)));
+    paintDetails();
     $("#eDelete").style.display="";
     $("#sheet").classList.add("open");
   }
@@ -472,6 +575,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     $("#eTime").value=toTimeInput(t.due);
     dayOptions(eDayOffset);
     $("#eKinds").style.display="none";
+    $("#eCouche").style.display="none"; $("#eMeal").style.display="none";
     $("#eDelete").style.display="";
     $("#sheet").classList.add("open");
   }
@@ -487,7 +591,30 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     $$(".kchip").forEach(x=>x.setAttribute("aria-pressed",eKinds.includes(x.dataset.k)));
   }));
 
-  $$(".quick").forEach(b=>b.addEventListener("click",()=>{
+  $$(".dchip").forEach(c=>c.addEventListener("click",()=>{
+    const k=c.dataset.c;
+    if(k==="both") eCouche=["pipi","caca"];
+    else eCouche=(eCouche.length===1&&eCouche[0]===k)?[]:[k];
+    paintDetails();
+    // couche seule en création : un seul geste suffit
+    if(editing&&editing.mode==="compose"&&!eKinds.includes("manger")&&eCouche.length) commit();
+  }));
+
+  $$(".mchip").forEach(c=>c.addEventListener("click",()=>{
+    eMeal.type=c.dataset.m; paintDetails();
+  }));
+
+  $$("[data-ml]").forEach(b=>b.addEventListener("click",()=>{
+    const cur=parseInt($("#eMl").value,10);
+    eMeal.ml=Math.max(0,(isNaN(cur)?20:cur)+(+b.dataset.ml));
+    paintDetails();
+  }));
+  $("#eMl").addEventListener("input",()=>{
+    const v=parseInt($("#eMl").value,10);
+    eMeal.ml=isNaN(v)?null:v;
+  });
+
+  $$(".quick[data-adj]").forEach(b=>b.addEventListener("click",()=>{
     const [h,m]=$("#eTime").value.split(":").map(Number);
     const d=new Date(); d.setHours(h,m+(+b.dataset.adj),0,0);
     // si le retrait fait passer avant minuit, on recule d'un jour
@@ -501,13 +628,29 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     return d.getTime();
   }
 
+  function commit(){
+    if(!editing)return;
+    const data={
+      ts:composedTs(),
+      kinds:eKinds.slice(),
+      couche:eKinds.includes("couche")?eCouche.slice():[],
+      meal:eKinds.includes("manger")?{type:eMeal.type,ml:eMeal.ml==null?null:eMeal.ml}:null
+    };
+    if(editing.mode==="compose"){
+      const e=normalize(Object.assign({id:uid()},data));
+      db.entries.push(e); putEntry(e);
+      if(navigator.vibrate)navigator.vibrate(12);
+    }else{
+      const e=db.entries.find(x=>x.id===editing.id);
+      if(e){ Object.assign(e,data); normalize(e); putEntry(e); }
+    }
+    renderTab1(); closeSheet();
+  }
+
   $("#eSave").addEventListener("click",()=>{
     if(!editing)return;
-    if(editing.type==="entry"){
-      const e=db.entries.find(x=>x.id===editing.id);
-      if(e){ e.ts=composedTs(); e.kinds=eKinds.slice(); putEntry(e); }
-      renderTab1();
-    }else{
+    if(editing.type==="entry"){ commit(); return; }
+    {
       const t=db.tasks.find(x=>x.id===editing.id);
       if(t){ t.due=composedTs(); putTask(t); }
       renderTasks();
@@ -620,6 +763,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   });
   nInput.addEventListener("focus",disarm);
   counts();
+  $("#ver").textContent="v"+VERSION;
 
 
   /* ================= SYNCHRONISATION ================= */
@@ -639,7 +783,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
   function applyRemote(v){
     applying=true;
-    db.entries=Object.values(v.entries||{}).filter(Boolean);
+    db.entries=Object.values(v.entries||{}).filter(Boolean).map(normalize);
     db.tasks=Object.values(v.tasks||{}).filter(Boolean);
     if(typeof v.iv==="number") db.iv=v.iv;
     // on n'écrase jamais la note pendant la frappe
