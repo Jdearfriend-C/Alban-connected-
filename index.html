@@ -140,6 +140,11 @@
   .task.done .lab{text-decoration:line-through;color:var(--graphite)}
   .task.past .lab{color:var(--graphite)}
   .task.due .when{color:var(--signal)}
+  .cal{
+    background:none;border:1px solid var(--rule);border-radius:8px;font:inherit;font-size:11px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--graphite);padding:6px 9px;cursor:pointer;flex:none;
+  }
+  .cal:active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
   .rep{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--graphite);border:1px solid var(--rule);padding:2px 5px;border-radius:8px}
 
   /* ---------- partage ---------- */
@@ -159,6 +164,13 @@
   }
   #spaceGen{background:none;border:1px solid var(--rule);color:var(--graphite);border-radius:8px;font:inherit;font-size:12px;padding:12px 14px;cursor:pointer}
   #shareState{font-size:12px;color:var(--graphite);margin-top:10px}
+  #notifBox{margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)}
+  #notifBtn{
+    background:none;border:1px solid var(--rule);color:var(--ink);border-radius:8px;font:inherit;
+    font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:11px 14px;cursor:pointer;
+  }
+  #notifBtn.on{background:var(--couche);border-color:var(--couche);color:#fff}
+  #notifState{font-size:12px;color:var(--graphite);margin-top:8px;line-height:1.45}
 
   /* ---------- onglet notes : éditeur plein écran ---------- */
   #p3:not([hidden]){display:flex;flex-direction:column}
@@ -285,6 +297,10 @@
         <button id="spaceBtn">Relier</button>
       </div>
       <div id="shareState"></div>
+      <div id="notifBox">
+        <button id="notifBtn">Activer les rappels</button>
+        <div id="notifState"></div>
+      </div>
     </div>
   </section>
 
@@ -299,6 +315,9 @@
       <button class="add" id="tAdd">Ajouter</button>
       <label class="caps" style="display:flex;align-items:center;gap:7px;flex:1 1 100%;padding-top:2px">
         <input type="checkbox" id="tRepeat"> Répéter chaque jour
+      </label>
+      <label class="caps" style="display:flex;align-items:center;gap:7px;flex:1 1 100%">
+        <input type="checkbox" id="tCal" checked> Créer aussi un rappel calendrier
       </label>
     </div>
     <h2 class="sec">À venir</h2>
@@ -339,6 +358,7 @@
       <div class="sline">
         <button class="mchip" data-m="biberon">Biberon</button>
         <button class="mchip" data-m="sein">Sein</button>
+        <button class="mchip" data-m="both">Les deux</button>
       </div>
       <div class="sline mlline">
         <button class="quick" data-ml="-10">−10</button>
@@ -388,7 +408,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   let db={entries:[],tasks:[],notes:[],iv:3};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="1.7";
+  const VERSION="1.9";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -453,9 +473,11 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     const out=[];
     if(e.kinds.includes("couche"))
       out.push("Couche"+(e.couche.length?' <i>· '+e.couche.join(" + ")+'</i>':""));
-    if(e.kinds.includes("manger"))
-      out.push((e.meal&&e.meal.type==="sein"?"Sein":"Biberon")+
-               (e.meal&&e.meal.ml?' <i>· '+e.meal.ml+' ml</i>':""));
+    if(e.kinds.includes("manger")){
+      const t=(e.meal&&e.meal.type)||"biberon";
+      const nom = t==="sein" ? "Sein" : t==="both" ? "Sein + biberon" : "Biberon";
+      out.push(nom+(e.meal&&e.meal.ml?' <i>· '+e.meal.ml+' ml</i>':""));
+    }
     return out.join(" + ");
   }
 
@@ -519,6 +541,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       c.setAttribute("aria-pressed",on);
     });
     $$(".mchip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.m===eMeal.type));
+    const needsMl = eMeal.type!=="sein";
+    $(".mlline").style.display = (hasM && needsMl) ? "" : "none";
     $("#eMl").value = eMeal.ml==null ? "" : eMeal.ml;
   }
 
@@ -601,7 +625,10 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   }));
 
   $$(".mchip").forEach(c=>c.addEventListener("click",()=>{
-    eMeal.type=c.dataset.m; paintDetails();
+    eMeal.type=c.dataset.m;
+    if(eMeal.type==="sein") eMeal.ml=null;
+    else if(eMeal.ml==null) eMeal.ml=20;
+    paintDetails();
   }));
 
   $$("[data-ml]").forEach(b=>b.addEventListener("click",()=>{
@@ -680,6 +707,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     const t={id:uid(),label,due:d.getTime(),done:null,repeat:$("#tRepeat").checked};
     db.tasks.push(t); putTask(t);
     $("#tLabel").value=""; renderTasks();
+    if($("#tCal").checked) addToCalendar(t);
   }
   $("#tAdd").addEventListener("click",addTask);
   $("#tLabel").addEventListener("keydown",e=>{if(e.key==="Enter")addTask();});
@@ -704,6 +732,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       '<div class="meta" data-e="'+t.id+'"><div class="lab">'+esc(t.label)+'</div>'+
       '<div class="when mono">'+hm(t.due)+' · '+dayLabel(t.due)+
         (t.done?' · pris à '+hm(t.done):' · '+delta(t.due))+'</div></div>'+
+      (t.done?"":'<button class="cal" data-cal="'+t.id+'" title="Ajouter au calendrier">Rappel</button>')+
       (t.repeat?'<span class="rep">jour</span>':'')+
       '<button class="del" data-x="'+t.id+'" aria-label="Supprimer">×</button></div>';
   }
@@ -716,6 +745,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     $("#past").innerHTML=old.length?old.map(taskHTML).join(""):'<div class="empty">Rien pour l\'instant.</div>';
     $$("[data-t]").forEach(b=>b.addEventListener("click",()=>toggle(b.dataset.t)));
     $$("[data-e]").forEach(b=>b.addEventListener("click",()=>openTaskSheet(b.dataset.e)));
+    $$("[data-cal]").forEach(b=>b.addEventListener("click",()=>
+      addToCalendar(db.tasks.find(t=>t.id===b.dataset.cal))));
     $$("[data-x]").forEach(b=>b.addEventListener("click",()=>{
       db.tasks=db.tasks.filter(t=>t.id!==b.dataset.x); delTask(b.dataset.x); renderTasks();}));
   }
@@ -792,6 +823,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     }
     saveLocal(); renderTab1(); renderTasks();
     applying=false;
+    if(typeof checkDue==="function") checkDue();
   }
 
   function seedRemote(v){
@@ -860,6 +892,111 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       ? "Choisissez un code et touchez Relier, puis saisissez le même code sur l'autre téléphone."
       : "Aucune base configurée : l'app fonctionne sur ce téléphone uniquement.");
   })();
+
+
+
+  /* ================= RAPPEL CALENDRIER ================= */
+  function icsStamp(ts){
+    const d=new Date(ts);
+    return d.getUTCFullYear()+pad(d.getUTCMonth()+1)+pad(d.getUTCDate())+"T"+
+           pad(d.getUTCHours())+pad(d.getUTCMinutes())+"00Z";
+  }
+
+  function calendarUrl(t){
+    const start=icsStamp(t.due), end=icsStamp(t.due+15*6e4);
+    return "https://calendar.google.com/calendar/render?action=TEMPLATE"+
+           "&text="+encodeURIComponent(t.label)+
+           "&dates="+start+"/"+end+
+           (t.repeat?"&recur="+encodeURIComponent("RRULE:FREQ=DAILY"):"")+
+           "&details="+encodeURIComponent("Rappel créé depuis Suivi");
+  }
+
+  function icsFile(t){
+    const lines=[
+      "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Suivi//FR","CALSCALE:GREGORIAN",
+      "BEGIN:VEVENT",
+      "UID:"+t.id+"@suivi",
+      "DTSTAMP:"+icsStamp(Date.now()),
+      "DTSTART:"+icsStamp(t.due),
+      "DTEND:"+icsStamp(t.due+15*6e4),
+      "SUMMARY:"+t.label.replace(/[\n,;]/g," "),
+      t.repeat?"RRULE:FREQ=DAILY":null,
+      "BEGIN:VALARM","TRIGGER:PT0M","ACTION:DISPLAY",
+      "DESCRIPTION:"+t.label.replace(/[\n,;]/g," "),
+      "END:VALARM","END:VEVENT","END:VCALENDAR"
+    ].filter(Boolean).join("\r\n");
+    const url=URL.createObjectURL(new Blob([lines],{type:"text/calendar"}));
+    const a=document.createElement("a");
+    a.href=url; a.download=t.label.replace(/[^\w -]/g,"").slice(0,30)+".ics"; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+  }
+
+  function addToCalendar(t){
+    if(!t) return;
+    window.open(calendarUrl(t),"_blank","noopener");
+  }
+
+  /* ================= RAPPELS ================= */
+  const notifBtn=$("#notifBtn"), notifState=$("#notifState");
+  const FIRED_KEY="suivi.fired";
+  let fired={};
+  try{ fired=JSON.parse(localStorage.getItem(FIRED_KEY)||"{}"); }catch(e){}
+  const markFired=id=>{ fired[id]=Date.now(); try{ localStorage.setItem(FIRED_KEY,JSON.stringify(fired)); }catch(e){} };
+
+  const notifSupported = ("Notification" in window);
+
+  function notifPaint(){
+    if(!notifSupported){
+      notifBtn.style.display="none";
+      notifState.textContent="Ce navigateur ne gère pas les notifications.";
+      return;
+    }
+    const p=Notification.permission;
+    notifBtn.classList.toggle("on",p==="granted");
+    notifBtn.textContent = p==="granted" ? "Rappels actifs" : "Activer les rappels";
+    notifState.textContent = p==="granted"
+      ? "Alerte à l'heure exacte, uniquement si l'app est ouverte. Pour un rappel fiable téléphone verrouillé, utilisez le bouton Rappel de chaque tâche."
+      : p==="denied"
+        ? "Notifications refusées. Réautorisez-les dans les réglages du site, puis rouvrez l'app."
+        : "Filet de sécurité quand l'app est ouverte. Le rappel fiable passe par le calendrier (bouton Rappel sur chaque tâche).";
+  }
+
+  notifBtn.addEventListener("click",()=>{
+    if(!notifSupported) return;
+    Notification.requestPermission().then(()=>{ notifPaint(); checkDue(); });
+  });
+
+  function fire(t){
+    markFired(t.id);
+    try{
+      const n=new Notification(t.label,{
+        body:"Prévu à "+hm(t.due),
+        tag:"suivi-"+t.id,
+        icon:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23182028'/><circle cx='50' cy='50' r='26' fill='%23FF5B3D'/></svg>"
+      });
+      n.onclick=()=>{ window.focus(); tab(2); n.close(); };
+    }catch(e){}
+    if(navigator.vibrate) navigator.vibrate([120,60,120]);
+  }
+
+  function checkDue(){
+    if(!notifSupported || Notification.permission!=="granted") return;
+    const now=Date.now();
+    db.tasks.forEach(t=>{
+      if(t.done || fired[t.id]) return;
+      // uniquement à l'instant T : fenêtre de 90 s, pas de rattrapage des heures passées
+      if(t.due<=now && now-t.due<90000) fire(t);
+    });
+    // purge des marqueurs de plus de 3 jours
+    const cut=now-3*864e5, keys=Object.keys(fired);
+    if(keys.length>60) keys.forEach(k=>{ if(fired[k]<cut) delete fired[k]; });
+  }
+
+  // les tâches déjà en retard au lancement ne déclenchent pas d'alerte
+  db.tasks.forEach(t=>{ if(!t.done && t.due<=Date.now()-90000 && !fired[t.id]) fired[t.id]=Date.now(); });
+
+  notifPaint();
+  setInterval(checkDue,20000);
 
   const now=new Date();
   $("#tTime").value=pad(now.getHours())+":"+pad(now.getMinutes());
