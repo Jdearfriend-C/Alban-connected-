@@ -55,20 +55,36 @@
   .tab{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px 24px}
   .tab[hidden]{display:none}
 
-  #next{display:flex;gap:10px;margin:16px 0 18px}
-  .npill{
-    flex:1;background:var(--card);border:1px dashed var(--rule);border-radius:8px;
-    padding:11px 12px;cursor:pointer;text-align:left;font:inherit;
+  /* ---------- jauge de lait ---------- */
+  #gauge{
+    display:block;width:100%;text-align:left;margin:0 0 4px;cursor:pointer;
+    background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px;font:inherit;
   }
-  .npill:active{background:var(--ink);color:var(--paper)}
-  .npill .lbl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--graphite)}
+  #gauge:active{border-color:var(--ink)}
+  #gTop{display:flex;align-items:baseline;gap:8px}
+  #gLabel{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite)}
+  #gSet{margin-left:auto;font-size:11px;color:var(--graphite);letter-spacing:.06em}
+  #gNums{display:flex;align-items:baseline;gap:6px;margin-top:6px}
+  #gDone{font-size:32px;font-weight:500;letter-spacing:-.02em;color:var(--ink)}
+  #gTarget{font-size:15px;color:var(--graphite)}
+  #gBar{height:8px;background:var(--sunk);border-radius:8px;margin-top:10px;overflow:hidden}
+  #gFill{height:100%;width:0;background:var(--biberon);border-radius:8px;transition:width .35s ease}
+  #gauge.over #gFill{background:var(--signal)}
+  #gCount{margin-left:auto;font-size:15px;font-weight:500;color:var(--ink);letter-spacing:.02em;white-space:nowrap}
+  #gCount span{color:var(--graphite);font-weight:400}
+  #gNote{font-size:12px;color:var(--graphite);margin-top:8px}
+  #gDose{font-size:12px;color:var(--graphite);margin-top:3px}
+  #gDose b{color:var(--ink);font-weight:600}
+
+  #next{display:flex;gap:20px;margin:18px 0 20px}
+  .npill{flex:1;min-width:0}
+  .npill .lbl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--graphite);display:block}
   .npill.couche .lbl{color:var(--couche)}
-  .npill.biberon .lbl,.npill.manger .lbl{color:var(--biberon)}
-  .npill .t{font-size:26px;font-weight:500;letter-spacing:-.02em;margin-top:3px;display:block}
+  .npill.manger .lbl{color:var(--biberon)}
+  .npill .t{font-size:26px;font-weight:500;letter-spacing:-.02em;margin-top:2px;display:block;color:var(--ink)}
   .npill .d{font-size:11px;color:var(--graphite);letter-spacing:.04em}
-  .npill.due{border-style:solid;border-color:var(--signal)}
+  .npill.due .t{color:var(--signal)}
   .npill.due .d{color:var(--signal)}
-  .npill:active .lbl,.npill:active .d{color:inherit}
 
   /* card englobante : les 2 options + l'action cumulée */
   .logcard{
@@ -196,15 +212,15 @@
   #noteClear.armed{color:var(--signal);font-weight:600}
 
   /* ---------- feuille d'édition ---------- */
-  #sheet{position:fixed;inset:0;background:rgba(24,32,40,.45);display:none;align-items:flex-end;z-index:20}
-  #sheet.open{display:flex}
-  #sheetbox{
+  #sheet,#tsheet{position:fixed;inset:0;background:rgba(24,32,40,.45);display:none;align-items:flex-end;z-index:20}
+  #sheet.open,#tsheet.open{display:flex}
+  #sheetbox,#tbox{
     width:100%;background:var(--paper);border-top:2px solid var(--ink);
     border-radius:8px 8px 0 0;
     max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
     padding:20px 20px calc(20px + env(safe-area-inset-bottom));
   }
-  #sheetbox h3{font-size:20px;letter-spacing:-.01em;color:var(--ink);font-weight:600;margin-bottom:16px}
+  #sheetbox h3,#tbox h3{font-size:20px;letter-spacing:-.01em;color:var(--ink);font-weight:600;margin-bottom:16px}
   .sline{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
   #eTime{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:12px;font:inherit;font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums}
   .quick{background:none;border:1px solid var(--rule);border-radius:8px;font:inherit;font-size:13px;padding:10px 11px;cursor:pointer;color:var(--ink)}
@@ -230,6 +246,16 @@
     font-size:22px;color:var(--ink);
   }
   .unit{font-size:13px;color:var(--graphite);letter-spacing:.1em}
+  .tfield{
+    flex:1;min-width:0;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:13px;
+    font-family:"Roboto Mono",ui-monospace,monospace;font-size:20px;color:var(--ink);text-align:center;
+  }
+  .tlab{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);margin:14px 0 8px}
+  #tDose{font-size:13px;color:var(--graphite);line-height:1.5;margin-top:10px}
+  #tDose b{color:var(--ink);font-weight:600}
+  #tCalc{font-size:13px;color:var(--graphite);line-height:1.5;margin-top:10px}
+  #tCalc b{color:var(--ink);font-weight:600}
+  #tDisc{font-size:12px;color:var(--graphite);line-height:1.5;margin-top:14px;padding-top:12px;border-top:1px solid var(--rule)}
   #eCouche,#eMeal{margin-bottom:18px}
   .mlline{margin-top:10px}
   /* bloc date & heure : secondaire, regroupé, en creux */
@@ -247,7 +273,8 @@
   .sactions{display:flex;gap:8px;margin-top:18px}
   .sactions button{flex:1;border:none;border-radius:8px;font:inherit;font-size:13px;letter-spacing:.14em;text-transform:uppercase;padding:14px 6px;cursor:pointer}
   #eSave{background:var(--ink);color:var(--paper);flex:2}
-  #eCancel{background:none;border:1px solid var(--rule);color:var(--graphite)}
+  #eCancel,#tClose{background:none;border:1px solid var(--rule);color:var(--graphite)}
+  #tSave{background:var(--ink);color:var(--paper);flex:2}
   #eDelete{background:none;border:1px solid var(--signal);color:var(--signal)}
 
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -270,6 +297,13 @@
 <main>
   <section class="tab" id="p1" role="tabpanel">
     <div id="next"></div>
+    <button id="gauge">
+      <div id="gTop"><span id="gLabel">Lait aujourd'hui</span><span id="gSet">Régler</span></div>
+      <div id="gNums"><span id="gDone" class="mono">0</span><span id="gTarget" class="mono"></span><span id="gCount" class="mono"></span></div>
+      <div id="gBar"><div id="gFill"></div></div>
+      <div id="gNote"></div>
+      <div id="gDose"></div>
+    </button>
     <div class="logcard">
       <div class="grid">
         <button class="log-btn b-couche" data-kind="couche"><span class="n">Couche</span><span class="s" id="hCouche"></span></button>
@@ -387,6 +421,37 @@
   </div>
 </div>
 
+<div id="tsheet" role="dialog" aria-modal="true">
+  <div id="tbox">
+    <h3>Ration journalière</h3>
+    <div class="tlab">Poids du bébé</div>
+    <div class="sline">
+      <input id="tWeight" class="tfield" type="number" inputmode="numeric" min="0" step="10" placeholder="3500">
+      <span class="unit">g</span>
+      <div class="seg2" id="tConst">
+        <button data-k="200">+200</button><button data-k="250">+250</button>
+      </div>
+    </div>
+    <div id="tCalc"></div>
+    <div class="tlab">Objectif retenu</div>
+    <div class="sline">
+      <input id="tTarget" class="tfield" type="number" inputmode="numeric" min="0" step="10" placeholder="750">
+      <span class="unit">ml</span>
+    </div>
+    <div class="tlab">Biberons par jour</div>
+    <div class="sline">
+      <input id="tBottles" class="tfield" type="number" inputmode="numeric" min="1" max="12" step="1" placeholder="8">
+      <span class="unit">🍼</span>
+    </div>
+    <div id="tDose"></div>
+    <div id="tDisc">Règle d'Appert : poids en grammes ÷ 10 + 250 ml. Repère indicatif pour l'alimentation au biberon, valable jusqu'à environ 6 kg. À ajuster selon l'appétit du bébé et l'avis de votre pédiatre.</div>
+    <div class="sactions">
+      <button id="tClose">Annuler</button>
+      <button id="tSave">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
@@ -405,10 +470,10 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     return{get:()=>localStorage.getItem(KEY),set:v=>localStorage.setItem(KEY,v)};}
     catch(e){let m=null;return{get:()=>m,set:v=>m=v};}})();
 
-  let db={entries:[],tasks:[],notes:[],iv:3};
+  let db={entries:[],tasks:[],notes:[],iv:3,target:null,weight:null,appert:250,bottles:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="1.9";
+  const VERSION="2.3";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -486,8 +551,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     const box=$("#next"); box.innerHTML="";
     [["couche","Prochaine couche"],["manger","Prochain repas"]].forEach(([k,lbl])=>{
       const last=lastOf(k);
-      const b=document.createElement("button");
-      b.className="npill "+k; b.type="button";
+      const b=document.createElement("div");
+      b.className="npill "+k;
       if(last===null){
         b.innerHTML='<span class="lbl">'+lbl+'</span><span class="t">—</span><span class="d">aucune entrée</span>';
       }else{
@@ -496,7 +561,6 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
         b.innerHTML='<span class="lbl">'+lbl+'</span><span class="t mono">'+hm(nxt)+'</span>'+
                     '<span class="d">'+dayLabel(nxt)+' · '+delta(nxt)+'</span>';
       }
-      b.addEventListener("click",()=>openCompose([k]));
       box.appendChild(b);
     });
     const lc=lastOf("couche"), lb=lastOf("manger");
@@ -519,7 +583,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   function renderTab1(){
     $("#dateline").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
     $$("[data-iv]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.iv===db.iv));
-    renderNext(); renderLog();
+    renderNext(); renderLog(); renderGauge();
   }
 
   $$(".log-btn").forEach(b=>b.addEventListener("click",()=>
@@ -529,7 +593,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   /* ---------- feuille d'édition ---------- */
   let editing=null;          // {type:'entry'|'task', id}
   let eKinds=[], eDayOffset=0, eBase=null;
-  let eCouche=[], eMeal={type:"biberon",ml:20};
+  let eCouche=[], eMeal={type:"biberon",ml:null};
 
   function paintDetails(){
     const hasC=eKinds.includes("couche"), hasM=eKinds.includes("manger");
@@ -561,7 +625,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(now-guard<600) return;
     guard=now;
     editing={type:"entry",id:null,mode:"compose"};
-    eKinds=kinds.slice(); eCouche=[]; eMeal={type:"biberon",ml:20};
+    eKinds=kinds.slice(); eCouche=[]; eMeal={type:"biberon",ml:(doseParBiberon()||20)};
     eDayOffset=0; eBase=now;
     $("#eTitle").textContent = kinds.length>1 ? "Couche + repas"
                              : kinds[0]==="couche" ? "Couche" : "Repas";
@@ -627,13 +691,13 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   $$(".mchip").forEach(c=>c.addEventListener("click",()=>{
     eMeal.type=c.dataset.m;
     if(eMeal.type==="sein") eMeal.ml=null;
-    else if(eMeal.ml==null) eMeal.ml=20;
+    else if(eMeal.ml==null) eMeal.ml=(doseParBiberon()||20);
     paintDetails();
   }));
 
   $$("[data-ml]").forEach(b=>b.addEventListener("click",()=>{
     const cur=parseInt($("#eMl").value,10);
-    eMeal.ml=Math.max(0,(isNaN(cur)?20:cur)+(+b.dataset.ml));
+    eMeal.ml=Math.max(0,(isNaN(cur)?(doseParBiberon()||20):cur)+(+b.dataset.ml));
     paintDetails();
   }));
   $("#eMl").addEventListener("input",()=>{
@@ -817,6 +881,10 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     db.entries=Object.values(v.entries||{}).filter(Boolean).map(normalize);
     db.tasks=Object.values(v.tasks||{}).filter(Boolean);
     if(typeof v.iv==="number") db.iv=v.iv;
+    if(typeof v.target==="number"||v.target===null) db.target=v.target;
+    if(typeof v.weight==="number"||v.weight===null) db.weight=v.weight;
+    if(typeof v.appert==="number") db.appert=v.appert;
+    if(typeof v.bottles==="number"||v.bottles===null) db.bottles=v.bottles;
     // on n'écrase jamais la note pendant la frappe
     if(typeof v.note==="string" && document.activeElement!==nInput && v.note!==db.note){
       db.note=v.note; nInput.value=v.note; counts();
@@ -834,6 +902,9 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     db.tasks.forEach(t=>{ if(!haveT.includes(t.id)) push("tasks/"+t.id,t); });
     if(typeof v.note!=="string" && db.note) push("note",db.note);
     if(typeof v.iv!=="number") push("iv",db.iv);
+    if(v.target==null&&db.target) push("target",db.target);
+    if(v.weight==null&&db.weight) push("weight",db.weight);
+    if(v.bottles==null&&db.bottles) push("bottles",db.bottles);
   }
 
   function connect(code){
@@ -894,6 +965,95 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   })();
 
 
+
+
+  /* ================= JAUGE DE LAIT ================= */
+  const appert=(w,c)=>Math.round((w/10+c)/5)*5;
+
+  function todayMeals(){
+    const t0=sod(new Date()), t1=t0+864e5;
+    let ml=0, bottles=0;
+    db.entries.forEach(e=>{
+      if(!e.kinds.includes("manger")) return;
+      if(e.ts<t0||e.ts>=t1) return;
+      const type=(e.meal&&e.meal.type)||"biberon";
+      ml += (e.meal&&e.meal.ml)||0;
+      if(type==="biberon"||type==="both") bottles++;
+    });
+    return {ml,bottles};
+  }
+
+  const doseParBiberon=()=>(db.target&&db.bottles)?Math.round(db.target/db.bottles/5)*5:null;
+
+  function renderGauge(){
+    const {ml:done,bottles}=todayMeals(), target=db.target||0;
+    $("#gCount").innerHTML = bottles+"<span>/"+(db.bottles||"–")+" 🍼</span>";
+    const dose=doseParBiberon();
+    $("#gDose").innerHTML = dose ? "Dose repère : <b>"+dose+" ml</b> par biberon" : "";
+    $("#gDone").textContent=done;
+    $("#gTarget").textContent = target? "/ "+target+" ml" : "ml";
+    const pct = target? Math.min(100, Math.round(done/target*100)) : 0;
+    $("#gFill").style.width=pct+"%";
+    $("#gauge").classList.toggle("over", target>0 && done>target);
+    if(!target){
+      $("#gNote").textContent="Touchez pour définir la ration journalière.";
+    }else if(done>target){
+      $("#gNote").textContent=(done-target)+" ml au-dessus de l'objectif.";
+    }else{
+      $("#gNote").textContent=(target-done)+" ml restants · "+pct+" %";
+    }
+  }
+
+  function paintDose(){
+    const t=parseInt($("#tTarget").value,10), n=parseInt($("#tBottles").value,10);
+    if(isNaN(t)||isNaN(n)||n<=0){ $("#tDose").textContent="Saisissez un objectif et un nombre de biberons pour obtenir la dose."; return; }
+    const d=Math.round(t/n/5)*5;
+    $("#tDose").innerHTML=t+" ml ÷ "+n+" = <b>"+d+" ml</b> par biberon"+
+      (d>240? " — dose élevée, mieux vaut répartir sur davantage de biberons." : "");
+  }
+
+  function paintCalc(){
+    const w=parseInt($("#tWeight").value,10);
+    $$("#tConst button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.k===db.appert));
+    if(isNaN(w)||w<=0){ $("#tCalc").textContent="Saisissez le poids pour appliquer la règle d'Appert."; return; }
+    const v=appert(w,db.appert);
+    $("#tCalc").innerHTML="Règle d'Appert : "+w+" ÷ 10 + "+db.appert+" = <b>"+v+" ml</b> par jour"+
+      (w>6000? " — au-delà de 6 kg, la règle n'est plus adaptée." : "");
+    $("#tTarget").value=v;
+    paintDose();
+  }
+
+  function openTarget(){
+    $("#tWeight").value = db.weight||"";
+    $("#tTarget").value = db.target||"";
+    $$("#tConst button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.k===db.appert));
+    $("#tBottles").value = db.bottles||"";
+    if(db.weight) paintCalc(); else $("#tCalc").textContent="Saisissez le poids pour appliquer la règle d'Appert.";
+    $("#tTarget").value = db.target||"";
+    paintDose();
+    $("#tsheet").classList.add("open");
+  }
+
+  $("#gauge").addEventListener("click",openTarget);
+  $("#tWeight").addEventListener("input",paintCalc);
+  $("#tBottles").addEventListener("input",paintDose);
+  $("#tTarget").addEventListener("input",paintDose);
+  $$("#tConst button").forEach(b=>b.addEventListener("click",()=>{
+    db.appert=+b.dataset.k; paintCalc();
+  }));
+  $("#tClose").addEventListener("click",()=>$("#tsheet").classList.remove("open"));
+  $("#tsheet").addEventListener("click",ev=>{ if(ev.target===$("#tsheet")) $("#tsheet").classList.remove("open"); });
+  $("#tSave").addEventListener("click",()=>{
+    const w=parseInt($("#tWeight").value,10), t=parseInt($("#tTarget").value,10),
+          n=parseInt($("#tBottles").value,10);
+    db.weight=isNaN(w)?null:w;
+    db.target=isNaN(t)?null:t;
+    db.bottles=(isNaN(n)||n<=0)?null:n;
+    saveLocal(); push("weight",db.weight); push("target",db.target);
+    push("appert",db.appert); push("bottles",db.bottles);
+    $("#tsheet").classList.remove("open");
+    renderGauge();
+  });
 
   /* ================= RAPPEL CALENDRIER ================= */
   function icsStamp(ts){
