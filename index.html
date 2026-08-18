@@ -12,7 +12,7 @@
 <style>
   :root{
     --paper:#E4E7EA; --card:#EDEFF1; --ink:#182028; --graphite:#5C6670;
-    --rule:#C7CDD2; --sunk:#D3D9DD; --couche:#2E8B94; --biberon:#E08A2B; --signal:#FF5B3D;
+    --rule:#C7CDD2; --sunk:#D3D9DD; --couche:#2E8B94; --biberon:#E08A2B; --signal:#FF5B3D; --night:#2B3A67;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;overscroll-behavior:none}
@@ -69,11 +69,14 @@
   #gTarget{font-size:15px;color:var(--graphite)}
   #gBar{height:8px;background:var(--sunk);border-radius:8px;margin-top:10px;overflow:hidden}
   #gFill{height:100%;width:0;background:var(--biberon);border-radius:8px;transition:width .35s ease}
+  #gauge.night #gFill{background:var(--night)}
   #gauge.over #gFill{background:var(--signal)}
+  #gPhase{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--graphite)}
+  #gauge.night #gPhase{color:var(--night);font-weight:600}
   #gCount{margin-left:auto;font-size:15px;font-weight:500;color:var(--ink);letter-spacing:.02em;white-space:nowrap}
   #gCount span{color:var(--graphite);font-weight:400}
   #gNote{font-size:12px;color:var(--graphite);margin-top:8px}
-  #gDose{font-size:12px;color:var(--graphite);margin-top:3px}
+  #gDose{font-size:12px;color:var(--graphite);margin-top:10px}
   #gDose b{color:var(--ink);font-weight:600}
 
   #next{display:flex;gap:20px;margin:18px 0 20px}
@@ -96,6 +99,7 @@
   .log-btn:active{transform:scale(.985)}
   .log-btn .n{font-size:22px;font-weight:600;letter-spacing:.02em}
   .log-btn .s{font-size:11px;letter-spacing:.16em;text-transform:uppercase;opacity:.85;display:block;margin-top:4px}
+  .log-btn .iv{margin-top:2px;opacity:.7;text-transform:none;letter-spacing:.02em;font-size:11.5px}
   .b-couche{background:var(--couche)}
   .b-biberon,.b-manger{background:var(--biberon)}
   .b-both{
@@ -133,6 +137,22 @@
   .kind i{font-style:normal;color:var(--graphite)}
   .day{font-size:12px;color:var(--graphite);flex:none}
   .edit{font-size:11px;color:var(--rule);letter-spacing:.1em;padding-left:8px}
+  .acc{
+    width:100%;display:flex;align-items:center;gap:10px;background:none;border:none;
+    border-bottom:1px solid var(--rule);font:inherit;color:var(--ink);
+    padding:14px 0;cursor:pointer;text-align:left;
+  }
+  .acc .albl{font-size:13px;letter-spacing:.04em}
+  .acc .acnt{margin-left:auto;font-size:12px;color:var(--graphite)}
+  .acc .chev{
+    width:8px;height:8px;border-right:1.5px solid var(--graphite);border-bottom:1.5px solid var(--graphite);
+    transform:rotate(45deg) translate(-2px,-2px);transition:transform .18s ease;flex:none;
+  }
+  .acc[aria-expanded="true"] .chev{transform:rotate(-135deg) translate(-2px,-2px)}
+  .acc[aria-expanded="true"] .albl{font-weight:600}
+  .accbody{padding-left:2px}
+  .accbody[hidden]{display:none}
+  .grouplab{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);padding:12px 0 2px}
   .empty{padding:22px 0;color:var(--graphite);font-size:14px}
   .del{background:none;border:none;color:var(--rule);font:inherit;font-size:16px;padding:0 0 0 10px;cursor:pointer}
   .del:active{color:var(--signal)}
@@ -298,7 +318,7 @@
   <section class="tab" id="p1" role="tabpanel">
     <div id="next"></div>
     <button id="gauge">
-      <div id="gTop"><span id="gLabel">Lait aujourd'hui</span><span id="gSet">Régler</span></div>
+      <div id="gTop"><span id="gLabel">Lait aujourd'hui</span><span id="gPhase"></span><span id="gSet">Régler</span></div>
       <div id="gNums"><span id="gDone" class="mono">0</span><span id="gTarget" class="mono"></span><span id="gCount" class="mono"></span></div>
       <div id="gBar"><div id="gFill"></div></div>
       <div id="gNote"></div>
@@ -306,14 +326,15 @@
     </button>
     <div class="logcard">
       <div class="grid">
-        <button class="log-btn b-couche" data-kind="couche"><span class="n">Couche</span><span class="s" id="hCouche"></span></button>
-        <button class="log-btn b-manger" data-kind="manger"><span class="n">Manger</span><span class="s" id="hManger"></span></button>
+        <button class="log-btn b-couche" data-kind="couche"><span class="n">Couche</span><span class="s" id="hCouche"></span><span class="s iv" id="ivC"></span></button>
+        <button class="log-btn b-manger" data-kind="manger"><span class="n">Manger</span><span class="s" id="hManger"></span><span class="s iv" id="ivM"></span></button>
       </div>
       <button class="log-btn b-both" data-kind="both"><span class="n">Les deux</span><span class="s">Une seule entrée</span></button>
     </div>
     <div class="interval">
-      <span class="caps">Intervalle</span>
-      <button data-iv="2">2 h</button><button data-iv="3">3 h</button><button data-iv="4">4 h</button>
+      <span class="caps">Couche</span>
+      <button data-ivc="2">2 h</button><button data-ivc="3">3 h</button>
+      <button data-ivc="4">4 h</button><button data-ivc="6">6 h</button>
     </div>
     <h2 class="sec">Journal</h2>
     <div class="hint">Touchez une ligne pour corriger l'heure.</div>
@@ -441,7 +462,11 @@
     <div class="tlab">Biberons par jour</div>
     <div class="sline">
       <input id="tBottles" class="tfield" type="number" inputmode="numeric" min="1" max="12" step="1" placeholder="8">
-      <span class="unit">🍼</span>
+      <span class="unit">🍼 total</span>
+    </div>
+    <div class="sline">
+      <input id="tNight" class="tfield" type="number" inputmode="numeric" min="0" max="12" step="1" placeholder="3">
+      <span class="unit">🌙 nuit</span>
     </div>
     <div id="tDose"></div>
     <div id="tDisc">Règle d'Appert : poids en grammes ÷ 10 + 250 ml. Repère indicatif pour l'alimentation au biberon, valable jusqu'à environ 6 kg. À ajuster selon l'appétit du bébé et l'avis de votre pédiatre.</div>
@@ -470,10 +495,10 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     return{get:()=>localStorage.getItem(KEY),set:v=>localStorage.setItem(KEY,v)};}
     catch(e){let m=null;return{get:()=>m,set:v=>m=v};}})();
 
-  let db={entries:[],tasks:[],notes:[],iv:3,target:null,weight:null,appert:250,bottles:null};
+  let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,bottlesNight:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="2.3";
+  const VERSION="2.9";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -527,6 +552,27 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   $("#t1").onclick=()=>tab(1); $("#t2").onclick=()=>tab(2); $("#t3").onclick=()=>tab(3);
 
   /* ================= ONGLET 1 ================= */
+  const NIGHT_START=21.5, NIGHT_END=7;
+  const NIGHT_H=(24-NIGHT_START)+NIGHT_END;   // 9,5 h
+  const DAY_H=24-NIGHT_H;                     // 14,5 h
+
+  function isNight(ts){
+    const d=new Date(ts), h=d.getHours()+d.getMinutes()/60;
+    return h>=NIGHT_START || h<NIGHT_END;
+  }
+  const nightBottles=()=>Math.max(0,Math.min(db.bottlesNight||0, db.bottles||0));
+  const dayBottles=()=>Math.max(0,(db.bottles||0)-nightBottles());
+
+  function mealIv(ts){
+    if(isNight(ts)) return nightBottles()>0 ? NIGHT_H/nightBottles() : db.iv;
+    return dayBottles()>0 ? DAY_H/dayBottles() : db.iv;
+  }
+  function ivHours(){ return mealIv(Date.now()); }
+  function fmtIv(h){
+    const m=Math.round(h*60);
+    return (m%60===0) ? (m/60)+" h" : Math.floor(m/60)+" h "+pad(m%60);
+  }
+
   const sorted=()=>db.entries.slice().sort((a,b)=>a.ts-b.ts);
   function lastOf(kind){
     const s=sorted();
@@ -556,7 +602,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       if(last===null){
         b.innerHTML='<span class="lbl">'+lbl+'</span><span class="t">—</span><span class="d">aucune entrée</span>';
       }else{
-        const nxt=last+db.iv*36e5;
+        const nxt=last+((k==="couche"?db.ivCouche:mealIv(last))*36e5);
         if(nxt<=Date.now())b.classList.add("due");
         b.innerHTML='<span class="lbl">'+lbl+'</span><span class="t mono">'+hm(nxt)+'</span>'+
                     '<span class="d">'+dayLabel(nxt)+' · '+delta(nxt)+'</span>';
@@ -566,29 +612,82 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     const lc=lastOf("couche"), lb=lastOf("manger");
     $("#hCouche").textContent=lc?"dernière "+hm(lc):"aucune";
     $("#hManger").textContent=lb?"dernier "+hm(lb):"aucun";
+    $("#ivC").textContent="(intervalle "+fmtIv(db.ivCouche)+")";
+    $("#ivM").textContent="(intervalle "+fmtIv(mealIv(Date.now()))+")";
+  }
+
+  const openGroups=new Set();
+
+  function rowHTML(e,withDay){
+    return '<div class="row" data-id="'+e.id+'">'+
+      e.kinds.map(k=>'<span class="dot '+k+'"></span>').join("")+
+      '<span class="hm mono">'+hm(e.ts)+'</span><span class="sec2 mono">:'+sc(e.ts)+'</span>'+
+      '<span class="kind">'+entryLabel(e)+'</span>'+
+      (withDay?'<span class="day">'+dayLabel(e.ts)+'</span>':'')+'</div>';
+  }
+
+  function groupEntries(list){
+    const now=new Date(), today=sod(now), yest=today-864e5;
+    const dow=(now.getDay()+6)%7;                  // lundi = 0
+    const week=today-dow*864e5;                    // début de la semaine courante
+    const month=new Date(now.getFullYear(),now.getMonth(),1).getTime();
+    const groups=[], byKey={};
+    const bucket=(key,label)=>{
+      if(!byKey[key]){ byKey[key]={key,label,items:[]}; groups.push(byKey[key]); }
+      return byKey[key];
+    };
+    list.forEach(e=>{
+      if(e.ts>=today) bucket("today","Aujourd'hui").items.push(e);
+      else if(e.ts>=yest) bucket("yest","Hier").items.push(e);
+      else if(e.ts>=week) bucket("week","Plus tôt cette semaine").items.push(e);
+      else if(e.ts>=month) bucket("month","Plus tôt ce mois-ci").items.push(e);
+      else{
+        const d=new Date(e.ts), k="m"+d.getFullYear()+"-"+d.getMonth();
+        const nom=d.toLocaleDateString("fr-FR",{month:"long"});
+        const lab="En "+nom+(d.getFullYear()!==now.getFullYear()?" "+d.getFullYear():"");
+        bucket(k,lab).items.push(e);
+      }
+    });
+    return groups;
   }
 
   function renderLog(){
     const el=$("#log"), list=sorted().reverse();
     if(!list.length){el.innerHTML='<div class="empty">Aucune entrée. Touchez Couche ou Manger.</div>';return;}
-    el.innerHTML=list.map(e=>
-      '<div class="row" data-id="'+e.id+'">'+
-      e.kinds.map(k=>'<span class="dot '+k+'"></span>').join("")+
-      '<span class="hm mono">'+hm(e.ts)+'</span><span class="sec2 mono">:'+sc(e.ts)+'</span>'+
-      '<span class="kind">'+entryLabel(e)+'</span>'+
-      '<span class="day">'+dayLabel(e.ts)+'</span></div>').join("");
+    let html="";
+    groupEntries(list).forEach(g=>{
+      if(g.key==="today"){
+        html+='<div class="grouplab">Aujourd\'hui</div>'+g.items.map(e=>rowHTML(e,false)).join("");
+        return;
+      }
+      const open=openGroups.has(g.key);
+      html+='<button class="acc" data-g="'+g.key+'" aria-expanded="'+open+'">'+
+            '<span class="chev"></span><span class="albl">'+g.label+'</span>'+
+            '<span class="acnt mono">'+g.items.length+'</span></button>'+
+            '<div class="accbody"'+(open?"":" hidden")+'>'+
+            g.items.map(e=>rowHTML(e,true)).join("")+'</div>';
+    });
+    el.innerHTML=html;
     el.querySelectorAll(".row").forEach(r=>r.addEventListener("click",()=>openSheet(r.dataset.id)));
+    el.querySelectorAll(".acc").forEach(a=>a.addEventListener("click",()=>{
+      const k=a.dataset.g;
+      if(openGroups.has(k)) openGroups.delete(k); else openGroups.add(k);
+      a.setAttribute("aria-expanded",openGroups.has(k));
+      a.nextElementSibling.hidden=!openGroups.has(k);
+    }));
   }
 
   function renderTab1(){
     $("#dateline").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
-    $$("[data-iv]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.iv===db.iv));
+    $$("[data-ivc]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.ivc===db.ivCouche));
     renderNext(); renderLog(); renderGauge();
   }
 
   $$(".log-btn").forEach(b=>b.addEventListener("click",()=>
     openCompose(b.dataset.kind==="both"?["couche","manger"]:[b.dataset.kind])));
-  $$("[data-iv]").forEach(b=>b.addEventListener("click",()=>{db.iv=+b.dataset.iv;putIv(db.iv);renderTab1();}));
+  $$("[data-ivc]").forEach(b=>b.addEventListener("click",()=>{
+    db.ivCouche=+b.dataset.ivc; saveLocal(); push("ivCouche",db.ivCouche); renderTab1();
+  }));
 
   /* ---------- feuille d'édition ---------- */
   let editing=null;          // {type:'entry'|'task', id}
@@ -881,6 +980,9 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     db.entries=Object.values(v.entries||{}).filter(Boolean).map(normalize);
     db.tasks=Object.values(v.tasks||{}).filter(Boolean);
     if(typeof v.iv==="number") db.iv=v.iv;
+    if(typeof v.ivAuto==="boolean") db.ivAuto=v.ivAuto;
+    if(typeof v.ivCouche==="number") db.ivCouche=v.ivCouche;
+    if(typeof v.bottlesNight==="number"||v.bottlesNight===null) db.bottlesNight=v.bottlesNight;
     if(typeof v.target==="number"||v.target===null) db.target=v.target;
     if(typeof v.weight==="number"||v.weight===null) db.weight=v.weight;
     if(typeof v.appert==="number") db.appert=v.appert;
@@ -902,6 +1004,9 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     db.tasks.forEach(t=>{ if(!haveT.includes(t.id)) push("tasks/"+t.id,t); });
     if(typeof v.note!=="string" && db.note) push("note",db.note);
     if(typeof v.iv!=="number") push("iv",db.iv);
+    if(typeof v.ivAuto!=="boolean") push("ivAuto",db.ivAuto);
+    if(typeof v.ivCouche!=="number") push("ivCouche",db.ivCouche);
+    if(v.bottlesNight==null&&db.bottlesNight) push("bottlesNight",db.bottlesNight);
     if(v.target==null&&db.target) push("target",db.target);
     if(v.weight==null&&db.weight) push("weight",db.weight);
     if(v.bottles==null&&db.bottles) push("bottles",db.bottles);
@@ -972,22 +1077,29 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
   function todayMeals(){
     const t0=sod(new Date()), t1=t0+864e5;
-    let ml=0, bottles=0;
+    const r={ml:0,bottles:0,day:{ml:0,bottles:0},night:{ml:0,bottles:0}};
     db.entries.forEach(e=>{
       if(!e.kinds.includes("manger")) return;
       if(e.ts<t0||e.ts>=t1) return;
       const type=(e.meal&&e.meal.type)||"biberon";
-      ml += (e.meal&&e.meal.ml)||0;
-      if(type==="biberon"||type==="both") bottles++;
+      const ml=(e.meal&&e.meal.ml)||0;
+      const b=(type==="biberon"||type==="both")?1:0;
+      const slot=isNight(e.ts)?r.night:r.day;
+      r.ml+=ml; r.bottles+=b; slot.ml+=ml; slot.bottles+=b;
     });
-    return {ml,bottles};
+    return r;
   }
+
 
   const doseParBiberon=()=>(db.target&&db.bottles)?Math.round(db.target/db.bottles/5)*5:null;
 
   function renderGauge(){
-    const {ml:done,bottles}=todayMeals(), target=db.target||0;
+    const gr=todayMeals(), done=gr.ml, bottles=gr.bottles, target=db.target||0;
     $("#gCount").innerHTML = bottles+"<span>/"+(db.bottles||"–")+" 🍼</span>";
+    const nuit=isNight(Date.now());
+    $("#gauge").classList.toggle("night",nuit);
+    $("#gPhase").textContent = nuit ? "🌙 Nuit" : "Jour";
+
     const dose=doseParBiberon();
     $("#gDose").innerHTML = dose ? "Dose repère : <b>"+dose+" ml</b> par biberon" : "";
     $("#gDone").textContent=done;
@@ -1006,10 +1118,14 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
   function paintDose(){
     const t=parseInt($("#tTarget").value,10), n=parseInt($("#tBottles").value,10);
+    let nb=parseInt($("#tNight").value,10); if(isNaN(nb)) nb=0;
     if(isNaN(t)||isNaN(n)||n<=0){ $("#tDose").textContent="Saisissez un objectif et un nombre de biberons pour obtenir la dose."; return; }
-    const d=Math.round(t/n/5)*5;
-    $("#tDose").innerHTML=t+" ml ÷ "+n+" = <b>"+d+" ml</b> par biberon"+
-      (d>240? " — dose élevée, mieux vaut répartir sur davantage de biberons." : "");
+    if(nb>n){ $("#tDose").textContent="Le nombre de biberons de nuit ne peut pas dépasser le total."; return; }
+    const d=Math.round(t/n/5)*5, jour=n-nb;
+    $("#tDose").innerHTML=t+" ml ÷ "+n+" = <b>"+d+" ml</b> par biberon, jour comme nuit<br>"+
+      "Jour : <b>"+jour+"</b> biberons"+(jour?" toutes les <b>"+fmtIv(DAY_H/jour)+"</b>":"")+
+      " · Nuit : <b>"+nb+"</b>"+(nb?" toutes les <b>"+fmtIv(NIGHT_H/nb)+"</b>":"")+
+      (d>240? "<br>Dose élevée, mieux vaut répartir sur davantage de biberons." : "");
   }
 
   function paintCalc(){
@@ -1028,6 +1144,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     $("#tTarget").value = db.target||"";
     $$("#tConst button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.k===db.appert));
     $("#tBottles").value = db.bottles||"";
+    $("#tNight").value = db.bottlesNight||"";
     if(db.weight) paintCalc(); else $("#tCalc").textContent="Saisissez le poids pour appliquer la règle d'Appert.";
     $("#tTarget").value = db.target||"";
     paintDose();
@@ -1037,6 +1154,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   $("#gauge").addEventListener("click",openTarget);
   $("#tWeight").addEventListener("input",paintCalc);
   $("#tBottles").addEventListener("input",paintDose);
+  $("#tNight").addEventListener("input",paintDose);
   $("#tTarget").addEventListener("input",paintDose);
   $$("#tConst button").forEach(b=>b.addEventListener("click",()=>{
     db.appert=+b.dataset.k; paintCalc();
@@ -1045,14 +1163,15 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   $("#tsheet").addEventListener("click",ev=>{ if(ev.target===$("#tsheet")) $("#tsheet").classList.remove("open"); });
   $("#tSave").addEventListener("click",()=>{
     const w=parseInt($("#tWeight").value,10), t=parseInt($("#tTarget").value,10),
-          n=parseInt($("#tBottles").value,10);
+          n=parseInt($("#tBottles").value,10), nb=parseInt($("#tNight").value,10);
     db.weight=isNaN(w)?null:w;
     db.target=isNaN(t)?null:t;
     db.bottles=(isNaN(n)||n<=0)?null:n;
+    db.bottlesNight=(isNaN(nb)||nb<0)?null:Math.min(nb,db.bottles||nb);
     saveLocal(); push("weight",db.weight); push("target",db.target);
-    push("appert",db.appert); push("bottles",db.bottles);
+    push("appert",db.appert); push("bottles",db.bottles); push("bottlesNight",db.bottlesNight);
     $("#tsheet").classList.remove("open");
-    renderGauge();
+    renderTab1();
   });
 
   /* ================= RAPPEL CALENDRIER ================= */
