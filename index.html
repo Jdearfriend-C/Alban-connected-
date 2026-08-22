@@ -152,7 +152,7 @@
   .acc[aria-expanded="true"] .albl{font-weight:600}
   .accbody{padding-left:2px}
   .accbody[hidden]{display:none}
-  .grouplab{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);padding:12px 0 2px}
+  .grouplab{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);padding:12px 0 2px}
   .empty{padding:22px 0;color:var(--graphite);font-size:14px}
   .del{background:none;border:none;color:var(--rule);font:inherit;font-size:16px;padding:0 0 0 10px;cursor:pointer}
   .del:active{color:var(--signal)}
@@ -296,6 +296,24 @@
   #eCancel,#tClose{background:none;border:1px solid var(--rule);color:var(--graphite)}
   #tSave{background:var(--ink);color:var(--paper);flex:2}
   #eDelete{background:none;border:1px solid var(--signal);color:var(--signal)}
+
+
+  /* ================= MODE NUIT ================= */
+  body.dark{
+    --paper:#12171D; --card:#1B222B; --ink:#E7ECF1; --graphite:#8D98A5;
+    --rule:#2C3742; --sunk:#0C1116;
+    --couche:#3FA8B2; --biberon:#E8A24B; --signal:#FF6F52; --night:#8FA6E0;
+  }
+  body.dark .log-btn{color:#0E1319}
+  body.dark .dchip[aria-pressed="true"],
+  body.dark .mchip[aria-pressed="true"],
+  body.dark .kchip[aria-pressed="true"]{color:#0E1319}
+  body.dark #noteSave,body.dark .form .add{color:#0E1319}
+  body.dark .box[aria-checked="true"]{background:var(--ink)}
+  body.dark .box{border-color:var(--ink);color:var(--paper)}
+  body.dark #sheet,body.dark #tsheet{background:rgba(0,0,0,.6)}
+  body.dark #noteInput::placeholder{color:var(--rule)}
+  body,#gauge,.logcard,#share,.note{transition:background-color .5s ease,border-color .5s ease,color .5s ease}
 
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -498,7 +516,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,bottlesNight:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="2.9";
+  const VERSION="3.0";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -626,20 +644,28 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       (withDay?'<span class="day">'+dayLabel(e.ts)+'</span>':'')+'</div>';
   }
 
+  const groupMl=items=>items.reduce((n,e)=>
+    n + (e.kinds.includes("manger") ? ((e.meal&&e.meal.ml)||0) : 0), 0);
+
   function groupEntries(list){
     const now=new Date(), today=sod(now), yest=today-864e5;
-    const dow=(now.getDay()+6)%7;                  // lundi = 0
-    const week=today-dow*864e5;                    // début de la semaine courante
     const month=new Date(now.getFullYear(),now.getMonth(),1).getTime();
     const groups=[], byKey={};
     const bucket=(key,label)=>{
       if(!byKey[key]){ byKey[key]={key,label,items:[]}; groups.push(byKey[key]); }
       return byKey[key];
     };
+    const last7=today-6*864e5;   // J-0 à J-6 détaillés jour par jour
     list.forEach(e=>{
       if(e.ts>=today) bucket("today","Aujourd'hui").items.push(e);
       else if(e.ts>=yest) bucket("yest","Hier").items.push(e);
-      else if(e.ts>=week) bucket("week","Plus tôt cette semaine").items.push(e);
+      else if(e.ts>=last7){
+        const d0=sod(new Date(e.ts));
+        let lab=new Date(d0).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric"});
+        lab=lab.charAt(0).toUpperCase()+lab.slice(1);
+        bucket("d"+d0,lab).daily=true;
+        byKey["d"+d0].items.push(e);
+      }
       else if(e.ts>=month) bucket("month","Plus tôt ce mois-ci").items.push(e);
       else{
         const d=new Date(e.ts), k="m"+d.getFullYear()+"-"+d.getMonth();
@@ -656,14 +682,17 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(!list.length){el.innerHTML='<div class="empty">Aucune entrée. Touchez Couche ou Manger.</div>';return;}
     let html="";
     groupEntries(list).forEach(g=>{
+      const daily = g.key==="today" || g.key==="yest" || g.daily;
+      const tot = daily ? groupMl(g.items)+" ml" : g.items.length;
       if(g.key==="today"){
-        html+='<div class="grouplab">Aujourd\'hui</div>'+g.items.map(e=>rowHTML(e,false)).join("");
+        html+='<div class="grouplab"><span>Aujourd\'hui</span><span class="mono">'+tot+'</span></div>'+
+              g.items.map(e=>rowHTML(e,false)).join("");
         return;
       }
       const open=openGroups.has(g.key);
       html+='<button class="acc" data-g="'+g.key+'" aria-expanded="'+open+'">'+
             '<span class="chev"></span><span class="albl">'+g.label+'</span>'+
-            '<span class="acnt mono">'+g.items.length+'</span></button>'+
+            '<span class="acnt mono">'+tot+'</span></button>'+
             '<div class="accbody"'+(open?"":" hidden")+'>'+
             g.items.map(e=>rowHTML(e,true)).join("")+'</div>';
     });
@@ -1093,9 +1122,20 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
   const doseParBiberon=()=>(db.target&&db.bottles)?Math.round(db.target/db.bottles/5)*5:null;
 
+
+  /* bascule automatique jour / nuit */
+  function applyTheme(){
+    const nuit=isNight(Date.now());
+    if(document.body.classList.contains("dark")===nuit) return;
+    document.body.classList.toggle("dark",nuit);
+    const m=document.querySelector('meta[name="theme-color"]');
+    if(m) m.setAttribute("content", nuit ? "#12171D" : "#E4E7EA");
+  }
+
   function renderGauge(){
     const gr=todayMeals(), done=gr.ml, bottles=gr.bottles, target=db.target||0;
     $("#gCount").innerHTML = bottles+"<span>/"+(db.bottles||"–")+" 🍼</span>";
+    applyTheme();
     const nuit=isNight(Date.now());
     $("#gauge").classList.toggle("night",nuit);
     $("#gPhase").textContent = nuit ? "🌙 Nuit" : "Jour";
@@ -1280,6 +1320,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   const now=new Date();
   $("#tTime").value=pad(now.getHours())+":"+pad(now.getMinutes());
   renderTab1(); renderTasks();
-  setInterval(()=>{renderNext();renderTasks();},30000);
+  applyTheme();
+  setInterval(()=>{applyTheme();renderNext();renderTasks();},30000);
 })();
 </script></body></html>
+
