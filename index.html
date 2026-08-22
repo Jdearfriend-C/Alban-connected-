@@ -122,6 +122,60 @@
   .interval button{background:none;border:1px solid var(--rule);color:var(--ink);font:inherit;font-size:12px;padding:5px 10px;cursor:pointer;border-radius:8px}
   .interval button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 
+  .sechead{display:flex;align-items:baseline;gap:10px;margin:24px 0 4px}
+  .sechead h2.sec{margin:0;flex:1}
+  #statsOpen{
+    background:none;border:1px solid var(--rule);border-radius:8px;font:inherit;font-size:12px;
+    color:var(--ink);padding:7px 11px;cursor:pointer;letter-spacing:.02em;
+  }
+  #statsOpen:active{background:var(--ink);color:var(--paper)}
+
+  /* ---------- page statistiques ---------- */
+  #stats{
+    position:fixed;inset:0;background:var(--paper);z-index:30;display:none;
+    flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #stats.open{display:flex}
+  #stHead{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--rule)}
+  #stBack{
+    background:none;border:none;font:inherit;font-size:22px;line-height:1;color:var(--ink);
+    cursor:pointer;padding:2px 6px 4px 0;
+  }
+  #stTitle{font-size:16px;font-weight:600;letter-spacing:-.01em}
+  #stBody{flex:1;min-height:0;overflow-y:auto;padding:16px 20px 30px}
+  #stSeg{display:flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+  #stSeg button{flex:1;background:var(--card);border:none;border-right:1px solid var(--rule);
+    font:inherit;font-size:13px;padding:11px 6px;color:var(--graphite);cursor:pointer}
+  #stSeg button:last-child{border-right:none}
+  #stSeg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  #stRead{margin:18px 0 4px;min-height:46px}
+  #stRead .big{font-size:28px;font-weight:500;letter-spacing:-.02em}
+  #stRead .sub{font-size:12px;color:var(--graphite);margin-top:3px}
+  #stRead .delta.up{color:var(--couche)}
+  #stRead .delta.down{color:var(--signal)}
+  #chartWrap{position:relative;margin-top:10px}
+  #chart{
+    overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0 0 6px;
+    scrollbar-width:none;
+  }
+  #chart::-webkit-scrollbar{display:none}
+  #bars{display:flex;align-items:flex-end;gap:7px;height:190px;position:relative;padding-top:6px}
+  .bwrap{display:flex;flex-direction:column;justify-content:flex-end;height:100%;flex:none;width:34px;cursor:pointer}
+  .bval{font-size:9px;color:var(--graphite);text-align:center;margin-bottom:3px;font-variant-numeric:tabular-nums}
+  .bar{width:100%;background:var(--biberon);border-radius:4px 4px 0 0;min-height:2px;transition:opacity .2s}
+  .bwrap.hit .bar{outline:2px solid var(--ink);outline-offset:1px}
+  .bar.over{background:var(--couche)}
+  .bar.none{background:var(--rule)}
+  .blab{font-size:9px;color:var(--graphite);text-align:center;margin-top:5px;letter-spacing:.02em}
+  #tline{position:absolute;left:0;right:0;border-top:1px dashed var(--signal);pointer-events:none}
+  #tlab{position:absolute;right:0;font-size:9px;color:var(--signal);letter-spacing:.1em;text-transform:uppercase;background:var(--paper);padding:0 3px;transform:translateY(-50%)}
+  #stSum{margin-top:22px;display:flex;gap:10px}
+  .scard{flex:1;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:12px}
+  .scard .k{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--graphite)}
+  .scard .v{font-size:20px;font-weight:500;margin-top:4px}
+  #stNote{font-size:12px;color:var(--graphite);line-height:1.5;margin-top:18px}
+
   h2.sec{margin:24px 0 4px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite)}
   .hint{font-size:12px;color:var(--graphite);padding:6px 0 2px}
 
@@ -354,8 +408,10 @@
       <button data-ivc="2">2 h</button><button data-ivc="3">3 h</button>
       <button data-ivc="4">4 h</button><button data-ivc="6">6 h</button>
     </div>
-    <h2 class="sec">Journal</h2>
-    <div class="hint">Touchez une ligne pour corriger l'heure.</div>
+    <div class="sechead">
+      <h2 class="sec">Journal</h2>
+      <button id="statsOpen">Voir les stats 🍼</button>
+    </div>
     <div id="log"></div>
 
     <div id="share">
@@ -409,6 +465,27 @@
     </div>
   </section>
 </main>
+
+<section id="stats" role="dialog" aria-modal="true">
+  <div id="stHead">
+    <button id="stBack" aria-label="Retour">←</button>
+    <span id="stTitle">Statistiques</span>
+  </div>
+  <div id="stBody">
+    <div id="stSeg">
+      <button data-p="day" aria-pressed="true">Jour</button>
+      <button data-p="week" aria-pressed="false">Semaine</button>
+      <button data-p="month" aria-pressed="false">Mois</button>
+    </div>
+    <div id="stRead"></div>
+    <div id="chartWrap">
+      <div id="chart"><div id="bars"></div></div>
+      <div id="tline"><span id="tlab"></span></div>
+    </div>
+    <div id="stSum"></div>
+    <div id="stNote"></div>
+  </div>
+</section>
 
 <div id="sheet" role="dialog" aria-modal="true">
   <div id="sheetbox">
@@ -516,7 +593,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,bottlesNight:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="3.0";
+  const VERSION="3.1";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -1101,6 +1178,141 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
 
 
+
+  /* ================= STATISTIQUES ================= */
+  let stPeriod="day", stSel=null;
+  const BAR_AREA=150, BASE=22;   // hauteur utile des barres, distance du socle
+
+  function dailyTotals(){
+    const map={};
+    db.entries.forEach(e=>{
+      if(!e.kinds.includes("manger")) return;
+      const k=sod(new Date(e.ts));
+      map[k]=(map[k]||0)+((e.meal&&e.meal.ml)||0);
+    });
+    return map;
+  }
+
+  function buckets(){
+    const daily=dailyTotals(), keys=Object.keys(daily).map(Number).sort((a,b)=>a-b);
+    if(!keys.length) return [];
+    const today=sod(new Date()), out=[];
+    if(stPeriod==="day"){
+      const from=Math.max(keys[0], today-29*864e5);
+      for(let t=from;t<=today;t+=864e5){
+        const d=new Date(t);
+        out.push({key:t, val:daily[t]||0, days:1,
+          lab:d.getDate()+"/"+pad(d.getMonth()+1),
+          full:d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})});
+      }
+    }else if(stPeriod==="week"){
+      const dow=(new Date(today).getDay()+6)%7, thisWeek=today-dow*864e5;
+      const first=sod(new Date(keys[0])), firstDow=(new Date(first).getDay()+6)%7;
+      let w=Math.max(first-firstDow*864e5, thisWeek-11*7*864e5);
+      for(; w<=thisWeek; w+=7*864e5){
+        let sum=0, n=0;
+        for(let i=0;i<7;i++){
+          const t=w+i*864e5;
+          if(t>today) break;
+          if(daily[t]!=null){ sum+=daily[t]; }
+          n++;
+        }
+        const d=new Date(w);
+        out.push({key:w, val:n?Math.round(sum/n):0, days:n,
+          lab:d.getDate()+"/"+pad(d.getMonth()+1),
+          full:"Semaine du "+d.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})});
+      }
+    }else{
+      const start=new Date(keys[0]); start.setDate(1);
+      const cur=new Date(); cur.setDate(1);
+      let m=new Date(Math.max(start.getTime(), new Date(cur.getFullYear(),cur.getMonth()-11,1).getTime()));
+      while(m<=cur){
+        const y=m.getFullYear(), mo=m.getMonth();
+        let sum=0, n=0;
+        for(let d=1;d<=31;d++){
+          const t=new Date(y,mo,d).getTime();
+          if(new Date(t).getMonth()!==mo || t>sod(new Date())) break;
+          sum+=daily[t]||0; n++;
+        }
+        out.push({key:m.getTime(), val:n?Math.round(sum/n):0, days:n,
+          lab:m.toLocaleDateString("fr-FR",{month:"short"}),
+          full:m.toLocaleDateString("fr-FR",{month:"long",year:"numeric"})});
+        m=new Date(y,mo+1,1);
+      }
+    }
+    return out;
+  }
+
+  function readout(b){
+    const t=db.target||0;
+    if(!b){ $("#stRead").innerHTML='<div class="sub">Touchez une barre pour le détail.</div>'; return; }
+    const d=t?b.val-t:null;
+    const unit=stPeriod==="day"?"":" en moyenne par jour";
+    $("#stRead").innerHTML=
+      '<div class="big mono">'+b.val+' ml</div>'+
+      '<div class="sub">'+b.full+unit+
+      (d===null?"":' · <span class="delta '+(d>=0?"up":"down")+'">'+(d>=0?"+":"")+d+' ml vs cible</span>')+
+      '</div>';
+  }
+
+  function renderStats(){
+    const list=buckets(), target=db.target||0;
+    $$("#stSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.p===stPeriod));
+    if(!list.length){
+      $("#bars").innerHTML=""; $("#stSum").innerHTML="";
+      $("#stRead").innerHTML='<div class="sub">Aucune donnée de repas pour l\'instant.</div>';
+      $("#tline").style.display="none"; $("#stNote").textContent="";
+      return;
+    }
+    const max=Math.max(target, ...list.map(b=>b.val))*1.15 || 1;
+    const px=v=>Math.round(BAR_AREA*v/max);
+
+    $("#bars").innerHTML=list.map((b,i)=>
+      '<div class="bwrap'+(stSel===b.key?" hit":"")+'" data-b="'+b.key+'">'+
+      '<div class="bval">'+(b.val||"")+'</div>'+
+      '<div class="bar'+(b.val===0?" none":(target&&b.val>=target?" over":""))+'" style="height:'+Math.max(2,px(b.val))+'px"></div>'+
+      '<div class="blab">'+b.lab+'</div></div>').join("");
+
+    // ligne de cible
+    if(target){
+      $("#tline").style.display="";
+      $("#tline").style.bottom=(px(target)+BASE)+"px";
+      $("#tlab").textContent="cible "+target+" ml";
+    }else{
+      $("#tline").style.display="none";
+    }
+
+    const vals=list.filter(b=>b.val>0).map(b=>b.val);
+    const moy=vals.length?Math.round(vals.reduce((a,c)=>a+c,0)/vals.length):0;
+    const best=vals.length?Math.max(...vals):0;
+    const atteint=target?list.filter(b=>b.val>=target).length:0;
+    $("#stSum").innerHTML=
+      '<div class="scard"><div class="k">Moyenne</div><div class="v mono">'+moy+' ml</div></div>'+
+      '<div class="scard"><div class="k">Record</div><div class="v mono">'+best+' ml</div></div>'+
+      (target?'<div class="scard"><div class="k">Cible atteinte</div><div class="v mono">'+atteint+'/'+list.length+'</div></div>':"");
+
+    $("#stNote").textContent = stPeriod==="day"
+      ? "Total bu par jour sur les 30 derniers jours. La ligne rouge est la ration cible actuelle ("+(target||"non réglée")+(target?" ml":"")+")."
+      : "Moyenne quotidienne par "+(stPeriod==="week"?"semaine":"mois")+", comparable à la cible journalière. Les jours sans entrée comptent pour zéro.";
+
+    $$("#bars .bwrap").forEach(w=>w.addEventListener("click",()=>{
+      stSel=+w.dataset.b;
+      readout(list.find(b=>b.key===stSel));
+      $$("#bars .bwrap").forEach(x=>x.classList.toggle("hit",+x.dataset.b===stSel));
+    }));
+
+    const last=list[list.length-1];
+    if(stSel==null || !list.some(b=>b.key===stSel)) { stSel=last.key; $$("#bars .bwrap").forEach(x=>x.classList.toggle("hit",+x.dataset.b===stSel)); }
+    readout(list.find(b=>b.key===stSel));
+    setTimeout(()=>{ $("#chart").scrollLeft=$("#chart").scrollWidth; },0);
+  }
+
+  $("#statsOpen").addEventListener("click",()=>{ stSel=null; $("#stats").classList.add("open"); renderStats(); });
+  $("#stBack").addEventListener("click",()=>$("#stats").classList.remove("open"));
+  $$("#stSeg button").forEach(b=>b.addEventListener("click",()=>{
+    stPeriod=b.dataset.p; stSel=null; renderStats();
+  }));
+
   /* ================= JAUGE DE LAIT ================= */
   const appert=(w,c)=>Math.round((w/10+c)/5)*5;
 
@@ -1324,4 +1536,3 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   setInterval(()=>{applyTheme();renderNext();renderTasks();},30000);
 })();
 </script></body></html>
-
