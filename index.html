@@ -56,6 +56,35 @@
   .tab[hidden]{display:none}
 
   /* ---------- jauge de lait ---------- */
+  #tip{position:relative;margin:0 0 14px}
+  #tipArrow{
+    position:absolute;top:-7px;right:22%;width:12px;height:12px;background:var(--card);
+    border-left:1px solid var(--rule);border-top:1px solid var(--rule);transform:rotate(45deg);
+  }
+  #tipBar{
+    width:100%;display:flex;align-items:center;gap:9px;background:var(--card);
+    border:1px solid var(--rule);border-radius:8px;padding:11px 12px;font:inherit;
+    color:var(--ink);text-align:left;cursor:pointer;position:relative;
+  }
+  #tip.open #tipBar{border-radius:8px 8px 0 0;border-bottom:none}
+  #tipIcon{font-size:15px;flex:none}
+  #tipHead{flex:1;font-size:13px;font-weight:600;letter-spacing:-.01em;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #tipChev{
+    width:7px;height:7px;flex:none;border-right:1.5px solid var(--graphite);
+    border-bottom:1.5px solid var(--graphite);transform:rotate(45deg) translate(-2px,-2px);
+    transition:transform .18s ease;
+  }
+  #tip.open #tipChev{transform:rotate(-135deg) translate(-2px,-2px)}
+  #tipBody{
+    display:none;background:var(--card);border:1px solid var(--rule);border-top:none;
+    border-radius:0 0 8px 8px;padding:0 12px 12px;
+  }
+  #tip.open #tipBody{display:block}
+  #tipText{font-size:14px;line-height:1.5}
+  #tipText b{font-weight:600}
+  #tipWhy{font-size:12px;line-height:1.5;color:var(--graphite);margin-top:8px}
+
   #gauge{
     display:block;width:100%;text-align:left;margin:0 0 4px;cursor:pointer;
     background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px;font:inherit;
@@ -391,6 +420,11 @@
 <main>
   <section class="tab" id="p1" role="tabpanel">
     <div id="next"></div>
+    <div id="tip" hidden>
+      <div id="tipArrow"></div>
+      <button id="tipBar"><span id="tipIcon">💡</span><span id="tipHead"></span><span id="tipChev"></span></button>
+      <div id="tipBody"><p id="tipText"></p><p id="tipWhy"></p></div>
+    </div>
     <button id="gauge">
       <div id="gTop"><span id="gLabel">Lait aujourd'hui</span><span id="gPhase"></span><span id="gSet">Régler</span></div>
       <div id="gNums"><span id="gDone" class="mono">0</span><span id="gTarget" class="mono"></span><span id="gCount" class="mono"></span></div>
@@ -595,7 +629,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,bottlesNight:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="3.2";
+  const VERSION="3.4";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -795,7 +829,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   function renderTab1(){
     $("#dateline").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
     $$("[data-ivc]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.ivc===db.ivCouche));
-    renderNext(); renderLog(); renderGauge();
+    renderNext(); renderLog(); renderGauge(); renderTip();
   }
 
   $$(".log-btn").forEach(b=>b.addEventListener("click",()=>
@@ -1326,6 +1360,144 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   $$("#stSeg button").forEach(b=>b.addEventListener("click",()=>{
     stPeriod=b.dataset.p; stSel=null; renderStats();
   }));
+
+
+  /* ================= CONSEIL NUTRITION ================= */
+  const TIP_KEY="suivi.tip";
+  let tipOpen=true;
+  try{ tipOpen=localStorage.getItem(TIP_KEY)!=="0"; }catch(e){}
+  const r5=v=>Math.round(v/5)*5;
+  const clampDose=v=>Math.max(60,Math.min(150,r5(v)));
+
+  function mealsToday(){
+    const t0=sod(new Date()), t1=t0+864e5, out=[];
+    db.entries.forEach(e=>{
+      if(!e.kinds.includes("manger")) return;
+      if(e.ts<t0||e.ts>=t1) return;
+      const t=(e.meal&&e.meal.type)||"biberon";
+      if(t==="sein") return;
+      out.push({ts:e.ts, ml:(e.meal&&e.meal.ml)||0});
+    });
+    return out.sort((a,b)=>a.ts-b.ts);
+  }
+
+  // biberons théoriquement dus depuis minuit
+  function expectedByNow(){
+    const now=new Date(), h=now.getHours()+now.getMinutes()/60;
+    const nuitTot=nightBottles(), jourTot=dayBottles();
+    const nightEl=Math.min(h,NIGHT_END)+Math.max(0,h-NIGHT_START);
+    const dayEl=Math.max(0,Math.min(h,NIGHT_START)-NIGHT_END);
+    return (nuitTot*nightEl/NIGHT_H)+(jourTot*dayEl/DAY_H);
+  }
+
+  // moyenne des biberons par jour sur les 7 journées complètes précédentes
+  function weekStats(){
+    const D=dailyTotals(), today=sod(new Date());
+    let days=0, bots=0, ml=0;
+    for(let i=1;i<=7;i++){
+      const t=today-i*864e5;
+      if(D.bot[t]==null && D.ml[t]==null) continue;
+      days++; bots+=D.bot[t]||0; ml+=D.ml[t]||0;
+    }
+    return days? {days, perDay:bots/days, mlDay:ml/days, dose:bots?ml/bots:0} : null;
+  }
+
+  function buildAdvice(){
+    const T=db.target||0, N=db.bottles||0;
+    if(!T||!N) return null;
+    const list=mealsToday();
+    const dose=doseParBiberon()||r5(T/N);
+    const now=Date.now(), h=new Date().getHours()+new Date().getMinutes()/60;
+    const C=list.reduce((a,m)=>a+m.ml,0), B=list.length;
+    const reste=T-C, resteBib=N-B;
+    const last=list.length?list[list.length-1]:null;
+    const ivCible=mealIv(now);
+
+    // écart moyen des 3 dernières prises
+    let gap=null;
+    if(list.length>=2){
+      const tail=list.slice(-4), gaps=[];
+      for(let i=1;i<tail.length;i++) gaps.push((tail[i].ts-tail[i-1].ts)/36e5);
+      gap=gaps.reduce((a,c)=>a+c,0)/gaps.length;
+    }
+    const doseMoy = B? C/B : dose;
+    const heuresRestantes=Math.max(0,24-h);
+
+    /* --- 1. quota de biberons déjà atteint, journée pas finie --- */
+    if(B>=2 && resteBib<=0 && heuresRestantes>1.5){
+      const projB=B+(gap?Math.floor(heuresRestantes/Math.max(gap,2)):0);
+      let k=Math.max(1,Math.round(heuresRestantes/Math.max(ivCible*1.25,2.5)));
+      if(reste>0){
+        let d=clampDose(reste/k);
+        while(k>1 && reste/k<60){ k--; d=clampDose(reste/k); }
+        return {
+          head:"Cible presque atteinte",
+          text:"Il reste <b>"+Math.max(0,reste)+" ml</b> avant minuit et Alban a déjà pris ses "+N+" biberons. Prévoyez <b>"+(k>1?k+" prises":"une prise")+" de "+d+" ml</b>"+(k>1?", espacées d'environ "+fmtIv(heuresRestantes/k):"")+".",
+          why:"Des prises plus grosses et plus espacées tiennent mieux que plusieurs petites : le dépassement resterait proche de "+Math.max(0,(C+k*d)-T)+" ml au lieu d'environ "+Math.max(0,(C+(projB-B)*Math.round(doseMoy))-T)+" ml."
+        };
+      }
+      return {
+        head:"Cible atteinte",
+        text:"Alban est à <b>"+C+" ml</b> pour une cible de "+T+" ml. Si une prise s'impose, une <b>petite dose de 60 à 70 ml</b> suffit.",
+        why:"Le compteur repart à zéro à minuit, l'objectif de la journée est rempli."
+      };
+    }
+
+    /* --- 2. rythme trop rapide : il finira au-dessus --- */
+    if(B>=2 && gap && resteBib>0){
+      const ivRequis=heuresRestantes/resteBib;          // écart nécessaire pour tenir en N biberons
+      const projB=B+Math.floor(heuresRestantes/Math.max(gap,1.5));
+      const projMl=Math.round(C+(projB-B)*doseMoy);
+      if(gap < ivRequis*0.85 || projB>N+0.4){
+        const facteur=Math.min(1.5, ivRequis/Math.max(gap,1));
+        let next=clampDose(doseMoy*facteur), apres=null;
+        if(resteBib>1){
+          apres=clampDose((reste-next)/(resteBib-1));
+          // on n'écrase pas les biberons suivants : on rabote la hausse si besoin
+          while(apres<65 && next>doseMoy+5){
+            next=clampDose(next-5);
+            apres=clampDose((reste-next)/(resteBib-1));
+          }
+          if(next<=doseMoy+5) return null;
+        }
+        const nextT=(last?last.ts:now)+Math.min(5,Math.max(2,gap*facteur))*36e5;
+        return {
+          head:"Rythme un peu rapide",
+          text:"Alban boit toutes les <b>"+fmtIv(gap)+"</b> au lieu de "+fmtIv(ivRequis)+". Proposez <b>"+next+" ml</b> au prochain, vers <b>"+hm(nextT)+"</b>"+
+               (apres? ", puis "+apres+" ml sur les "+(resteBib-1)+" suivants." : "."),
+          why:"Un biberon plus rempli le cale plus longtemps : la journée finit sur "+N+" biberons et "+T+" ml, au lieu d'environ "+projB+" biberons et "+projMl+" ml."
+        };
+      }
+    }
+
+    /* --- 3. tendance de la semaine --- */
+    const w=weekStats();
+    if(w && w.days>=3 && w.perDay>N+0.4 && w.dose){
+      const cible=r5(T/N);
+      if(cible>w.dose+5) return {
+        head:"Tendance de la semaine",
+        text:"Sur "+w.days+" jours, Alban prend <b>"+w.perDay.toFixed(1)+" biberons</b> par jour pour "+N+" visés, avec des doses de "+Math.round(w.dose)+" ml en moyenne. Visez <b>"+cible+" ml</b> par biberon.",
+        why:"Remplir davantage chaque biberon supprime la prise en trop sans changer la quantité totale de la journée."
+      };
+    }
+    return null;
+  }
+
+  function renderTip(){
+    const a=buildAdvice(), el=$("#tip");
+    if(!a){ el.hidden=true; return; }
+    el.hidden=false;
+    el.classList.toggle("open",tipOpen);
+    $("#tipHead").textContent=a.head;
+    $("#tipText").innerHTML=a.text;
+    $("#tipWhy").innerHTML=a.why;
+  }
+
+  $("#tipBar").addEventListener("click",()=>{
+    tipOpen=!tipOpen;
+    try{ localStorage.setItem(TIP_KEY,tipOpen?"1":"0"); }catch(e){}
+    $("#tip").classList.toggle("open",tipOpen);
+  });
 
   /* ================= JAUGE DE LAIT ================= */
   const appert=(w,c)=>Math.round((w/10+c)/5)*5;
