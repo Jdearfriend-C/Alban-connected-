@@ -178,6 +178,12 @@
     font:inherit;font-size:13px;padding:11px 6px;color:var(--graphite);cursor:pointer}
   #stSeg button:last-child{border-right:none}
   #stSeg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  #stMetric{display:flex;gap:8px;margin-top:10px}
+  #stMetric button{
+    flex:1;background:none;border:1px solid var(--rule);border-radius:8px;font:inherit;font-size:12px;
+    color:var(--graphite);padding:9px 6px;cursor:pointer;
+  }
+  #stMetric button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
   #stRead{margin:18px 0 4px;min-height:46px}
   #stRead .big{font-size:28px;font-weight:500;letter-spacing:-.02em}
   #stRead .sub{font-size:12px;color:var(--graphite);margin-top:3px}
@@ -351,6 +357,25 @@
     font-size:22px;color:var(--ink);
   }
   .unit{font-size:13px;color:var(--graphite);letter-spacing:.1em}
+  #timerBox{
+    display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;
+    background:var(--card);border:1px solid var(--rule);border-radius:8px;
+  }
+  #tClock{
+    flex:1;font-size:36px;font-weight:300;letter-spacing:.01em;color:var(--ink);
+    font-variant-numeric:tabular-nums;line-height:1.1;
+  }
+  #timerBox.idle #tClock{color:var(--rule)}
+  #timerBox.run #tClock{color:var(--signal)}
+  #tToggle{
+    background:var(--ink);color:var(--paper);border:none;border-radius:8px;font:inherit;font-size:12px;
+    letter-spacing:.14em;text-transform:uppercase;padding:12px 16px;cursor:pointer;flex:none;
+  }
+  #timerBox.run #tToggle{background:var(--signal)}
+  #tReset{
+    background:none;border:1px solid var(--rule);color:var(--graphite);border-radius:8px;
+    font:inherit;font-size:15px;padding:10px 12px;cursor:pointer;flex:none;
+  }
   .tfield{
     flex:1;min-width:0;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:13px;
     font-family:"Roboto Mono",ui-monospace,monospace;font-size:20px;color:var(--ink);text-align:center;
@@ -513,6 +538,10 @@
       <button data-p="week" aria-pressed="false">Semaine</button>
       <button data-p="month" aria-pressed="false">Mois</button>
     </div>
+    <div id="stMetric">
+      <button data-m="ml" aria-pressed="true">Volume</button>
+      <button data-m="dur" aria-pressed="false">Durée ⏱</button>
+    </div>
     <div id="stRead"></div>
     <div id="chartWrap">
       <div id="chart"><div id="bars"></div></div>
@@ -541,16 +570,16 @@
     </div>
 
     <div id="eMeal">
-      <div class="sline">
-        <button class="mchip" data-m="biberon">Biberon</button>
-        <button class="mchip" data-m="sein">Sein</button>
-        <button class="mchip" data-m="both">Les deux</button>
-      </div>
       <div class="sline mlline">
         <button class="quick" data-ml="-10">−10</button>
         <input id="eMl" type="number" inputmode="numeric" min="0" step="5">
         <span class="unit">ml</span>
         <button class="quick" data-ml="10">+10</button>
+      </div>
+      <div id="timerBox">
+        <div id="tClock" class="mono">00:00</div>
+        <button id="tToggle">Démarrer</button>
+        <button id="tReset" aria-label="Réinitialiser">↺</button>
       </div>
     </div>
 
@@ -629,7 +658,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,bottlesNight:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="3.4";
+  const VERSION="3.5";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -718,7 +747,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(e.kinds.includes("manger")){
       const t=(e.meal&&e.meal.type)||"biberon";
       const nom = t==="sein" ? "Sein" : t==="both" ? "Sein + biberon" : "Biberon";
-      out.push(nom+(e.meal&&e.meal.ml?' <i>· '+e.meal.ml+' ml</i>':""));
+      out.push(nom+(e.meal&&e.meal.ml?' <i>· '+e.meal.ml+' ml</i>':"")+
+        (e.meal&&e.meal.dur?' <i>· '+Math.max(1,Math.round(e.meal.dur/60))+' min</i>':""));
     }
     return out.join(" + ");
   }
@@ -841,7 +871,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   /* ---------- feuille d'édition ---------- */
   let editing=null;          // {type:'entry'|'task', id}
   let eKinds=[], eDayOffset=0, eBase=null;
-  let eCouche=[], eMeal={type:"biberon",ml:null};
+  let eCouche=[], eMeal={type:"biberon",ml:null}, eDur=null, tRun=null, tTick=null;
 
   function paintDetails(){
     const hasC=eKinds.includes("couche"), hasM=eKinds.includes("manger");
@@ -852,10 +882,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       const on = k==="both" ? (eCouche.length===2) : (eCouche.length===1 && eCouche[0]===k);
       c.setAttribute("aria-pressed",on);
     });
-    $$(".mchip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.m===eMeal.type));
-    const needsMl = eMeal.type!=="sein";
-    $(".mlline").style.display = (hasM && needsMl) ? "" : "none";
     $("#eMl").value = eMeal.ml==null ? "" : eMeal.ml;
+    paintTimer();
   }
 
   function dayOptions(sel){
@@ -868,12 +896,47 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     });
   }
 
+  const mmss=sec=>pad(Math.floor(sec/60))+":"+pad(sec%60);
+
+  function paintTimer(){
+    const box=$("#timerBox");
+    const run=tRun!=null;
+    const sec = run ? Math.floor((Date.now()-tRun)/1000) : (eDur||0);
+    $("#tClock").textContent=mmss(sec);
+    box.classList.toggle("run",run);
+    box.classList.toggle("idle",!run && !eDur);
+    $("#tToggle").textContent = run ? "Arrêter" : (eDur ? "Reprendre" : "Démarrer");
+  }
+
+  function stopTimer(){
+    if(tRun==null) return;
+    eDur=(eDur||0)+Math.floor((Date.now()-tRun)/1000);
+    tRun=null; clearInterval(tTick); tTick=null;
+    // l'heure de fin devient l'heure de l'entrée
+    eDayOffset=0; $("#eTime").value=toTimeInput(Date.now()); dayOptions(0);
+    paintTimer();
+  }
+
+  function resetTimer(){
+    tRun=null; if(tTick){clearInterval(tTick);tTick=null;}
+    eDur=null; paintTimer();
+  }
+
+  $("#tToggle").addEventListener("click",()=>{
+    if(tRun!=null){ stopTimer(); return; }
+    tRun=Date.now();
+    tTick=setInterval(paintTimer,1000);
+    paintTimer();
+  });
+  $("#tReset").addEventListener("click",resetTimer);
+
   function openCompose(kinds){
     const now=Date.now();
     if(now-guard<600) return;
     guard=now;
     editing={type:"entry",id:null,mode:"compose"};
     eKinds=kinds.slice(); eCouche=[]; eMeal={type:"biberon",ml:(doseParBiberon()||20)};
+    resetTimer();
     eDayOffset=0; eBase=now;
     $("#eTitle").textContent = kinds.length>1 ? "Couche + repas"
                              : kinds[0]==="couche" ? "Couche" : "Repas";
@@ -891,6 +954,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     eBase=e.ts; eKinds=e.kinds.slice();
     eCouche=(e.couche||[]).slice();
     eMeal={type:(e.meal&&e.meal.type)||"biberon",ml:(e.meal&&e.meal.ml!=null)?e.meal.ml:null};
+    tRun=null; if(tTick){clearInterval(tTick);tTick=null;}
+    eDur=(e.meal&&e.meal.dur)||null;
     eDayOffset=-Math.round((sod(new Date())-sod(new Date(e.ts)))/864e5);
     $("#eTitle").textContent="Modifier l'entrée";
     $("#eTime").value=toTimeInput(e.ts);
@@ -916,7 +981,10 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     $("#sheet").classList.add("open");
   }
 
-  const closeSheet=()=>{$("#sheet").classList.remove("open");editing=null;};
+  const closeSheet=()=>{
+    if(tTick){clearInterval(tTick);tTick=null;} tRun=null;
+    $("#sheet").classList.remove("open");editing=null;
+  };
   $("#eCancel").addEventListener("click",closeSheet);
   $("#sheet").addEventListener("click",ev=>{if(ev.target===$("#sheet"))closeSheet();});
 
@@ -936,12 +1004,6 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(editing&&editing.mode==="compose"&&!eKinds.includes("manger")&&eCouche.length) commit();
   }));
 
-  $$(".mchip").forEach(c=>c.addEventListener("click",()=>{
-    eMeal.type=c.dataset.m;
-    if(eMeal.type==="sein") eMeal.ml=null;
-    else if(eMeal.ml==null) eMeal.ml=(doseParBiberon()||20);
-    paintDetails();
-  }));
 
   $$("[data-ml]").forEach(b=>b.addEventListener("click",()=>{
     const cur=parseInt($("#eMl").value,10);
@@ -969,11 +1031,12 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
   function commit(){
     if(!editing)return;
+    if(tRun!=null) stopTimer();
     const data={
       ts:composedTs(),
       kinds:eKinds.slice(),
       couche:eKinds.includes("couche")?eCouche.slice():[],
-      meal:eKinds.includes("manger")?{type:eMeal.type,ml:eMeal.ml==null?null:eMeal.ml}:null
+      meal:eKinds.includes("manger")?{type:eMeal.type,ml:eMeal.ml==null?null:eMeal.ml,dur:eDur||null}:null
     };
     if(editing.mode==="compose"){
       const e=normalize(Object.assign({id:uid()},data));
@@ -1223,30 +1286,36 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
 
   /* ================= STATISTIQUES ================= */
-  let stPeriod="day", stSel=null;
+  let stPeriod="day", stMetric="ml", stSel=null;
   const BAR_AREA=140, BASE=22;   // hauteur utile des barres, distance du socle
 
   function dailyTotals(){
-    const map={}, cnt={};
+    const map={}, cnt={}, dsum={}, dn={};
     db.entries.forEach(e=>{
       if(!e.kinds.includes("manger")) return;
       const k=sod(new Date(e.ts));
       const t=(e.meal&&e.meal.type)||"biberon";
       map[k]=(map[k]||0)+((e.meal&&e.meal.ml)||0);
       cnt[k]=(cnt[k]||0)+((t==="biberon"||t==="both")?1:0);
+      if(e.meal&&e.meal.dur){ dsum[k]=(dsum[k]||0)+e.meal.dur; dn[k]=(dn[k]||0)+1; }
     });
-    return {ml:map,bot:cnt};
+    return {ml:map,bot:cnt,dsum,dn};
   }
 
   function buckets(){
-    const D=dailyTotals(), daily=D.ml, bot=D.bot, keys=Object.keys(daily).map(Number).sort((a,b)=>a-b);
+    const D=dailyTotals();
+    const dur = stMetric==="dur";
+    const daily = dur ? D.dsum : D.ml;
+    const bot   = dur ? D.dn   : D.bot;
+    const keys=Object.keys(daily).map(Number).sort((a,b)=>a-b);
     if(!keys.length) return [];
     const today=sod(new Date()), out=[];
     if(stPeriod==="day"){
       const from=Math.max(keys[0], today-29*864e5);
       for(let t=from;t<=today;t+=864e5){
         const d=new Date(t);
-        out.push({key:t, val:daily[t]||0, bot:bot[t]||0, days:1,
+        const vDay = dur ? (D.dn[t]? Math.round(D.dsum[t]/D.dn[t]/60) : 0) : (daily[t]||0);
+        out.push({key:t, val:vDay, bot:bot[t]||0, days:1,
           lab:d.getDate()+"/"+pad(d.getMonth()+1),
           full:d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})});
       }
@@ -1264,7 +1333,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
           n++;
         }
         const d=new Date(w);
-        out.push({key:w, val:n?Math.round(sum/n):0, bot:nb, days:n,
+        const vW = dur ? (nb? Math.round(sum/nb/60) : 0) : (n? Math.round(sum/n) : 0);
+        out.push({key:w, val:vW, bot:nb, days:n,
           lab:d.getDate()+"/"+pad(d.getMonth()+1),
           full:"Semaine du "+d.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})});
       }
@@ -1280,7 +1350,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
           if(new Date(t).getMonth()!==mo || t>sod(new Date())) break;
           sum+=daily[t]||0; nb+=bot[t]||0; n++;
         }
-        out.push({key:m.getTime(), val:n?Math.round(sum/n):0, bot:nb, days:n,
+        const vM = dur ? (nb? Math.round(sum/nb/60) : 0) : (n? Math.round(sum/n) : 0);
+        out.push({key:m.getTime(), val:vM, bot:nb, days:n,
           lab:m.toLocaleDateString("fr-FR",{month:"short"}),
           full:m.toLocaleDateString("fr-FR",{month:"long",year:"numeric"})});
         m=new Date(y,mo+1,1);
@@ -1290,9 +1361,14 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   }
 
   function readout(b){
-    const t=db.target||0;
     if(!b){ $("#stRead").innerHTML='<div class="sub">Touchez une barre pour le détail.</div>'; return; }
-    const d=t?b.val-t:null;
+    if(stMetric==="dur"){
+      $("#stRead").innerHTML=
+        '<div class="big mono">'+b.val+' min <span style="font-size:15px;color:var(--graphite)">· '+b.bot+' ⏱</span></div>'+
+        '<div class="sub">'+b.full+' · durée moyenne par biberon chronométré</div>';
+      return;
+    }
+    const t=db.target||0, d=t?b.val-t:null;
     const unit=stPeriod==="day"?"":" en moyenne par jour";
     const bt = stPeriod==="day" ? b.bot+" 🍼" : b.bot+" 🍼 sur la période";
     $("#stRead").innerHTML=
@@ -1303,11 +1379,14 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   }
 
   function renderStats(){
-    const list=buckets(), target=db.target||0;
+    const list=buckets(), target=(stMetric==="ml")?(db.target||0):0;
     $$("#stSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.p===stPeriod));
+    $$("#stMetric button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===stMetric));
     if(!list.length){
       $("#bars").innerHTML=""; $("#stSum").innerHTML="";
-      $("#stRead").innerHTML='<div class="sub">Aucune donnée de repas pour l\'instant.</div>';
+      $("#stRead").innerHTML='<div class="sub">'+(stMetric==="dur"
+        ? "Aucun biberon chronométré pour l'instant. Utilisez le minuteur dans la feuille Manger."
+        : "Aucune donnée de repas pour l'instant.")+'</div>';
       $("#tline").style.display="none"; $("#stNote").textContent="";
       return;
     }
@@ -1317,7 +1396,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     $("#bars").innerHTML=list.map((b,i)=>
       '<div class="bwrap'+(stSel===b.key?" hit":"")+'" data-b="'+b.key+'">'+
       '<div class="bval">'+(b.val||"")+'</div>'+
-      '<div class="bbot">'+(b.bot?b.bot+"🍼":"")+'</div>'+
+      '<div class="bbot">'+(b.bot? b.bot+(stMetric==="dur"?"⏱":"🍼") : "")+'</div>'+
       '<div class="bar'+(b.val===0?" none":(target&&b.val>=target?" over":""))+'" style="height:'+Math.max(2,px(b.val))+'px"></div>'+
       '<div class="blab">'+b.lab+'</div></div>').join("");
 
@@ -1330,18 +1409,24 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       $("#tline").style.display="none";
     }
 
+    const u = stMetric==="dur" ? " min" : " ml";
     const vals=list.filter(b=>b.val>0).map(b=>b.val);
     const moy=vals.length?Math.round(vals.reduce((a,c)=>a+c,0)/vals.length):0;
     const best=vals.length?Math.max(...vals):0;
     const atteint=target?list.filter(b=>b.val>=target).length:0;
+    const totalPrises=list.reduce((a,b)=>a+b.bot,0);
     $("#stSum").innerHTML=
-      '<div class="scard"><div class="k">Moyenne</div><div class="v mono">'+moy+' ml</div></div>'+
-      '<div class="scard"><div class="k">Record</div><div class="v mono">'+best+' ml</div></div>'+
-      (target?'<div class="scard"><div class="k">Cible atteinte</div><div class="v mono">'+atteint+'/'+list.length+'</div></div>':"");
+      '<div class="scard"><div class="k">Moyenne</div><div class="v mono">'+moy+u+'</div></div>'+
+      '<div class="scard"><div class="k">'+(stMetric==="dur"?"Plus long":"Record")+'</div><div class="v mono">'+best+u+'</div></div>'+
+      (stMetric==="dur"
+        ? '<div class="scard"><div class="k">Chronométrés</div><div class="v mono">'+totalPrises+'</div></div>'
+        : (target?'<div class="scard"><div class="k">Cible atteinte</div><div class="v mono">'+atteint+'/'+list.length+'</div></div>':""));
 
-    $("#stNote").textContent = stPeriod==="day"
-      ? "Total bu par jour sur les 30 derniers jours. La ligne rouge est la ration cible actuelle ("+(target||"non réglée")+(target?" ml":"")+")."
-      : "Moyenne quotidienne par "+(stPeriod==="week"?"semaine":"mois")+", comparable à la cible journalière. Les jours sans entrée comptent pour zéro.";
+    $("#stNote").textContent = stMetric==="dur"
+      ? "Durée moyenne d'un biberon chronométré. Seules les prises enregistrées avec le minuteur apparaissent ici."
+      : (stPeriod==="day"
+        ? "Total bu par jour sur les 30 derniers jours. La ligne rouge est la ration cible actuelle ("+(target||"non réglée")+(target?" ml":"")+")."
+        : "Moyenne quotidienne par "+(stPeriod==="week"?"semaine":"mois")+", comparable à la cible journalière. Les jours sans entrée comptent pour zéro.");
 
     $$("#bars .bwrap").forEach(w=>w.addEventListener("click",()=>{
       stSel=+w.dataset.b;
@@ -1359,6 +1444,9 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   $("#stBack").addEventListener("click",()=>$("#stats").classList.remove("open"));
   $$("#stSeg button").forEach(b=>b.addEventListener("click",()=>{
     stPeriod=b.dataset.p; stSel=null; renderStats();
+  }));
+  $$("#stMetric button").forEach(b=>b.addEventListener("click",()=>{
+    stMetric=b.dataset.m; stSel=null; renderStats();
   }));
 
 
