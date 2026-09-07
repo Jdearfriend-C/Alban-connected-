@@ -42,7 +42,52 @@
     text-transform:none;opacity:.85;
   }
   #dateline::first-letter{text-transform:uppercase}
-  nav{display:flex;gap:24px;margin-top:14px;border-bottom:1px solid var(--rule)}
+  #ident{display:flex;align-items:center;gap:28px;margin-top:14px}
+  .vh{position:absolute;left:-9999px;width:1px;height:1px;opacity:0;border:0;padding:0}
+  /* l'input recouvre la zone : le clic natif ouvre appareil photo / galerie */
+  .filepick{
+    position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;
+    z-index:4;font-size:0;padding:0;border:0;
+  }
+  .filepick[hidden]{display:none}
+  #nudge,#tmAdd{position:relative}
+  #stack{position:relative;width:68px;height:80px;flex:none}
+  #stack .filepick{height:68px}
+  .ps{position:absolute;border-radius:8px;background:var(--card);border:1px solid var(--rule)}
+  .ps3{left:9px;right:9px;top:14px;height:64px;opacity:.45}
+  .ps2{left:5px;right:5px;top:10px;height:64px;opacity:.7}
+  .ps1{
+    left:0;top:0;width:68px;height:68px;overflow:hidden;cursor:pointer;
+    border-style:dashed;display:flex;align-items:center;justify-content:center;
+  }
+  .ps1.filled{border-style:solid}
+  .ps1:not(.filled)::before,.ps1:not(.filled)::after{
+    content:"";position:absolute;background:var(--rule);border-radius:1px;
+  }
+  .ps1:not(.filled)::before{width:16px;height:1.5px}
+  .ps1:not(.filled)::after{width:1.5px;height:16px}
+  #photoDue{
+    z-index:5;position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;
+    background:var(--signal);border:2px solid var(--paper);
+  }
+  #idImg{width:100%;height:100%;object-fit:cover;display:block}
+  #ident{align-items:flex-start}
+  #idAge{
+    flex:1;min-width:0;background:none;border:none;padding:6px 0 0;text-align:left;cursor:pointer;
+    font:inherit;color:var(--ink);display:block;
+  }
+  #idAge .l1{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--graphite)}
+  #idAge .l2{display:block;font-size:26px;font-weight:500;letter-spacing:-.02em;line-height:1.15;margin-top:1px}
+  #idAge .l3{display:block;font-size:12px;color:var(--graphite);margin-top:1px}
+  #idAge.empty .l2{font-size:15px;font-weight:400;color:var(--graphite);text-decoration:underline}
+
+
+  #nudge{
+    display:block;margin-top:12px;background:var(--card);border:1px solid var(--signal);
+    border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--ink);cursor:pointer;
+  }
+  #nudge[hidden]{display:none}
+  nav{display:flex;gap:24px;margin-top:16px;border-bottom:1px solid var(--rule)}
   nav button{
     background:none;border:none;font:inherit;font-size:14px;letter-spacing:.16em;
     text-transform:uppercase;color:var(--graphite);padding:0 0 10px;cursor:pointer;
@@ -158,6 +203,43 @@
     color:var(--ink);padding:7px 11px;cursor:pointer;letter-spacing:.02em;
   }
   #statsOpen:active{background:var(--ink);color:var(--paper)}
+
+  /* ---------- time machine ---------- */
+  #tm{
+    position:fixed;inset:0;background:var(--paper);z-index:32;display:none;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #tm.open{display:flex}
+  #tmHead{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--rule)}
+  #tmBack{background:none;border:none;font:inherit;font-size:22px;line-height:1;color:var(--ink);cursor:pointer;padding:2px 6px 4px 0}
+  #tmTitle{flex:1;font-size:16px;font-weight:600;letter-spacing:-.01em}
+  #tmAdd{
+    background:var(--ink);color:var(--paper);border-radius:8px;font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;padding:9px 12px;cursor:pointer;
+  }
+  #tmBody{flex:1;min-height:0;overflow-y:auto;padding:26px 0 30px;text-align:center}
+  #tmAge{font-size:34px;font-weight:500;letter-spacing:-.03em;line-height:1.05;padding:0 20px}
+  #tmSub{font-size:13px;color:var(--graphite);margin-top:6px;padding:0 20px}
+  #tmFrame{margin:22px 72px 0;border-radius:8px;overflow:hidden;background:var(--card);aspect-ratio:1/1}
+  #tmImg{width:100%;height:100%;object-fit:cover;display:block}
+  #tmRailWrap{position:relative;margin-top:26px}
+  #tmRail{
+    display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:0;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:10px calc(50% - 23px);
+  }
+  #tmRail::-webkit-scrollbar{display:none}
+  .tick{
+    width:46px;flex:none;scroll-snap-align:center;display:flex;align-items:center;
+    justify-content:center;gap:9px;cursor:pointer;
+  }
+  .tick i{display:block;width:1px;height:11px;background:var(--rule)}
+  .tick b{display:block;width:2px;height:26px;background:var(--graphite);border-radius:2px}
+  .tick.on b{background:var(--signal);height:34px}
+  #tmCursor{
+    position:absolute;left:50%;top:2px;width:2px;height:8px;background:var(--signal);
+    transform:translateX(-50%);border-radius:2px;
+  }
+  #tmNote{font-size:12px;color:var(--graphite);margin-top:16px;padding:0 24px;line-height:1.5}
 
   /* ---------- page statistiques ---------- */
   #stats{
@@ -453,6 +535,26 @@
     <div id="dateline"></div>
     <button id="sync" title="État de la synchronisation"><span id="syncDot"></span><span id="syncLabel">Local</span></button>
   </div>
+  <div id="ident">
+    <div id="stack">
+      <div class="ps ps3"></div>
+      <div class="ps ps2"></div>
+      <div class="ps ps1" id="idPhoto">
+        <img id="idImg" alt="" hidden>
+      </div>
+      <input type="file" id="idFile" class="filepick" accept="image/*">
+      <span id="photoDue" hidden></span>
+    </div>
+    <button id="idAge">
+      <span class="l1">Alban a</span>
+      <span class="l2" id="idBig">—</span>
+      <span class="l3" id="idSmall"></span>
+    </button>
+    <input type="date" id="bDate" class="vh">
+  </div>
+
+  <div id="nudge" hidden><span id="nudgeTxt"></span><input type="file" id="nudgeFile" class="filepick" accept="image/*"></div>
+
   <nav role="tablist">
     <button id="t1" role="tab" aria-selected="true" aria-controls="p1">Suivi</button>
     <button id="t2" role="tab" aria-selected="false" aria-controls="p2">À faire</button>
@@ -544,6 +646,21 @@
     </div>
   </section>
 </main>
+
+<section id="tm" role="dialog" aria-modal="true">
+  <div id="tmHead">
+    <button id="tmBack" aria-label="Retour">←</button>
+    <span id="tmTitle">Time machine</span>
+    <span id="tmAdd">+ Photo<input type="file" id="tmFile" class="filepick" accept="image/*"></span>
+  </div>
+  <div id="tmBody">
+    <div id="tmAge">—</div>
+    <div id="tmSub"></div>
+    <div id="tmFrame"><img id="tmImg" alt=""></div>
+    <div id="tmRailWrap"><div id="tmCursor"></div><div id="tmRail"></div></div>
+    <div id="tmNote"></div>
+  </div>
+</section>
 
 <section id="stats" role="dialog" aria-modal="true">
   <div id="stHead">
@@ -679,10 +796,10 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     return{get:()=>localStorage.getItem(KEY),set:v=>localStorage.setItem(KEY,v)};}
     catch(e){let m=null;return{get:()=>m,set:v=>m=v};}})();
 
-  let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,ivTarget:null};
+  let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,ivTarget:null,birth:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="3.8";
+  const VERSION="4.3";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -881,7 +998,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   function renderTab1(){
     $("#dateline").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
     $$("[data-ivc]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.ivc===db.ivCouche));
-    renderNext(); renderLog(); renderGauge(); renderTip();
+    renderIdent(); renderNext(); renderLog(); renderGauge(); renderTip();
   }
 
   $$(".log-btn").forEach(b=>b.addEventListener("click",()=>
@@ -1217,6 +1334,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(typeof v.ivAuto==="boolean") db.ivAuto=v.ivAuto;
     if(typeof v.ivCouche==="number") db.ivCouche=v.ivCouche;
     if(typeof v.ivTarget==="number"||v.ivTarget===null) db.ivTarget=v.ivTarget;
+    if(typeof v.birth==="number"||v.birth===null) db.birth=v.birth;
     if(typeof v.target==="number"||v.target===null) db.target=v.target;
     if(typeof v.weight==="number"||v.weight===null) db.weight=v.weight;
     if(typeof v.appert==="number") db.appert=v.appert;
@@ -1241,6 +1359,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(typeof v.ivAuto!=="boolean") push("ivAuto",db.ivAuto);
     if(typeof v.ivCouche!=="number") push("ivCouche",db.ivCouche);
     if(v.ivTarget==null&&db.ivTarget) push("ivTarget",db.ivTarget);
+    if(v.birth==null&&db.birth) push("birth",db.birth);
     if(v.target==null&&db.target) push("target",db.target);
     if(v.weight==null&&db.weight) push("weight",db.weight);
     if(v.bottles==null&&db.bottles) push("bottles",db.bottles);
@@ -1306,6 +1425,172 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
 
 
+
+
+  /* ================= IDENTITÉ & TIME MACHINE ================= */
+  const PHOTOS_KEY="suivi.photos", RELANCE=14*864e5;
+  let photos=[];
+  try{ photos=JSON.parse(localStorage.getItem(PHOTOS_KEY)||"[]"); }catch(e){ photos=[]; }
+  // reprise de l'ancienne photo unique
+  try{
+    const old=localStorage.getItem("suivi.photo");
+    if(old && !photos.length){ photos=[{ts:Date.now(),src:old}]; savePhotos(); localStorage.removeItem("suivi.photo"); }
+  }catch(e){}
+  function savePhotos(){
+    try{ localStorage.setItem(PHOTOS_KEY,JSON.stringify(photos)); return true; }
+    catch(e){ return false; }
+  }
+
+  function ageAt(ts){
+    if(!db.birth) return null;
+    const j=Math.max(0,Math.floor((sod(new Date(ts))-sod(new Date(db.birth)))/864e5));
+    return {j, sem:Math.floor(j/7), reste:j%7};
+  }
+  function ageBig(a){
+    if(!a) return "—";
+    return a.sem<1 ? a.j+(a.j>1?" jours":" jour") : a.sem+(a.sem>1?" semaines":" semaine");
+  }
+  function ageSmall(a){
+    if(!a) return "";
+    if(a.sem<1) return "";
+    return a.reste? "et "+a.reste+(a.reste>1?" jours":" jour") : "tout juste";
+  }
+
+  const photoDue=()=> !photos.length || (Date.now()-photos[photos.length-1].ts)>RELANCE;
+
+  function renderIdent(){
+    const img=$("#idImg"), box=$("#idPhoto");
+    const last=photos.length?photos[photos.length-1]:null;
+    if(last){ img.src=last.src; img.hidden=false; box.classList.add("filled"); $("#idFile").hidden=true; }
+    else { img.hidden=true; box.classList.remove("filled"); $("#idFile").hidden=false; }
+    $("#photoDue").hidden = !(photoDue() && photos.length);
+    const nu=$("#nudge");
+    if(photoDue()){
+      nu.hidden=false;
+      const a=ageAt(Date.now());
+      $("#nudgeTxt").textContent = photos.length
+        ? "📷 Nouvelle photo à ajouter"+(a?" — Alban a "+ageBig(a):"")
+        : "📷 Ajoutez une première photo d'Alban";
+    } else nu.hidden=true;
+
+    const age=$("#idAge");
+    if(!db.birth){
+      age.classList.add("empty");
+      $("#idBig").textContent="Ajouter sa date de naissance";
+      $("#idSmall").textContent="";
+      return;
+    }
+    age.classList.remove("empty");
+    const a=ageAt(Date.now());
+    $("#idBig").textContent=ageBig(a);
+    $("#idSmall").textContent=ageSmall(a);
+  }
+
+  /* --- date de naissance : sélecteur natif direct --- */
+  $("#idAge").addEventListener("click",()=>{
+    const el=$("#bDate");
+    if(db.birth){ const d=new Date(db.birth); el.value=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+    if(el.showPicker){ try{ el.showPicker(); return; }catch(e){} }
+    el.click();
+  });
+  $("#bDate").addEventListener("change",()=>{
+    const v=$("#bDate").value;
+    if(!v) return;
+    const [Y,M,D]=v.split("-").map(Number);
+    db.birth=new Date(Y,M-1,D).getTime();
+    saveLocal(); push("birth",db.birth); renderIdent(); renderTM();
+  });
+
+  /* --- ajout de photo (caméra ou galerie, natif) --- */
+  function handlePick(ev){
+    const f=ev.target.files&&ev.target.files[0];
+    ev.target.value="";
+    if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      const im=new Image();
+      im.onload=()=>{
+        const S=560, c=document.createElement("canvas");
+        c.width=S; c.height=S;
+        const g=c.getContext("2d");
+        const k=Math.max(S/im.width,S/im.height), w=im.width*k, h=im.height*k;
+        g.drawImage(im,(S-w)/2,(S-h)/2,w,h);
+        photos.push({ts:Date.now(), src:c.toDataURL("image/jpeg",.72)});
+        photos.sort((a,b)=>a.ts-b.ts);
+        const ok=savePhotos();
+        tmIndex=photos.length-1;
+        renderIdent(); renderTM();
+        if(!ok) $("#tmNote").textContent="Mémoire du navigateur saturée : supprimez d'anciennes photos pour en ajouter.";
+      };
+      im.src=rd.result;
+    };
+    rd.readAsDataURL(f);
+  }
+  ["idFile","tmFile","nudgeFile"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.addEventListener("change",handlePick);
+  });
+
+  /* --- time machine --- */
+  let tmIndex=0, tmScrollTimer=null;
+
+  $("#stack").addEventListener("click",ev=>{
+    if(!photos.length) return;            // l'input superposé ouvre le sélecteur
+    tmIndex=photos.length-1;
+    $("#tm").classList.add("open");
+    renderTM(true);
+  });
+  $("#tmBack").addEventListener("click",()=>$("#tm").classList.remove("open"));
+
+  function renderTM(scrollToIndex){
+    if(!photos.length){
+      $("#tmAge").textContent="Aucune photo";
+      $("#tmSub").textContent="";
+      $("#tmImg").removeAttribute("src");
+      $("#tmRail").innerHTML="";
+      $("#tmNote").textContent="Ajoutez une première photo pour lancer la chronologie.";
+      return;
+    }
+    tmIndex=Math.max(0,Math.min(tmIndex,photos.length-1));
+    const p=photos[tmIndex], a=ageAt(p.ts);
+    $("#tmAge").textContent = a? ageBig(a) : new Date(p.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long"});
+    $("#tmSub").textContent = (a? (ageSmall(a)? ageSmall(a)+" · ":"") : "")+
+      new Date(p.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+    $("#tmImg").src=p.src;
+
+    $("#tmRail").innerHTML=photos.map((_,i)=>
+      '<div class="tick'+(i===tmIndex?" on":"")+'" data-i="'+i+'"><i></i><b></b><i></i></div>').join("");
+    $$("#tmRail .tick").forEach(t=>t.addEventListener("click",()=>{
+      tmIndex=+t.dataset.i; renderTM(true);
+    }));
+
+    const jours=Math.floor((Date.now()-photos[photos.length-1].ts)/864e5);
+    $("#tmNote").textContent = photoDue()
+      ? "Dernière photo il y a "+jours+" jour"+(jours>1?"s":"")+" — c'est le moment d'en ajouter une."
+      : "Prochaine photo conseillée dans "+(14-jours)+" jour"+((14-jours)>1?"s":"")+".";
+
+    if(scrollToIndex){
+      const rail=$("#tmRail");
+      requestAnimationFrame(()=>{
+        const el=rail.querySelector('[data-i="'+tmIndex+'"]');
+        if(el) rail.scrollLeft = el.offsetLeft - rail.clientWidth/2 + el.offsetWidth/2;
+      });
+    }
+  }
+
+  // le rail commande la sélection
+  $("#tmRail").addEventListener("scroll",()=>{
+    clearTimeout(tmScrollTimer);
+    tmScrollTimer=setTimeout(()=>{
+      const rail=$("#tmRail"), c=rail.scrollLeft+rail.clientWidth/2;
+      let best=0, dist=1e9;
+      $$("#tmRail .tick").forEach(t=>{
+        const d=Math.abs(t.offsetLeft+t.offsetWidth/2-c);
+        if(d<dist){ dist=d; best=+t.dataset.i; }
+      });
+      if(best!==tmIndex){ tmIndex=best; renderTM(); }
+    },90);
+  });
 
   /* ================= STATISTIQUES ================= */
   let stRange=7, stMetric="ml", stSel=null;
@@ -1866,130 +2151,4 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   $("#tWeight").addEventListener("input",paintCalc);
   $("#tBottles").addEventListener("input",paintDose);
   $("#tTarget").addEventListener("input",paintDose);
-  $$("#tConst button").forEach(b=>b.addEventListener("click",()=>{
-    db.appert=+b.dataset.k; paintCalc();
-  }));
-  $("#tClose").addEventListener("click",()=>$("#tsheet").classList.remove("open"));
-  $("#tsheet").addEventListener("click",ev=>{ if(ev.target===$("#tsheet")) $("#tsheet").classList.remove("open"); });
-  $("#tSave").addEventListener("click",()=>{
-    const w=parseInt($("#tWeight").value,10), t=parseInt($("#tTarget").value,10),
-          n=parseInt($("#tBottles").value,10);
-    db.weight=isNaN(w)?null:w;
-    db.target=isNaN(t)?null:t;
-    db.bottles=(isNaN(n)||n<=0)?null:n;
-    saveLocal(); push("weight",db.weight); push("target",db.target);
-    push("appert",db.appert); push("bottles",db.bottles);
-    $("#tsheet").classList.remove("open");
-    renderTab1();
-  });
-
-  /* ================= RAPPEL CALENDRIER ================= */
-  function icsStamp(ts){
-    const d=new Date(ts);
-    return d.getUTCFullYear()+pad(d.getUTCMonth()+1)+pad(d.getUTCDate())+"T"+
-           pad(d.getUTCHours())+pad(d.getUTCMinutes())+"00Z";
-  }
-
-  function calendarUrl(t){
-    const start=icsStamp(t.due), end=icsStamp(t.due+15*6e4);
-    return "https://calendar.google.com/calendar/render?action=TEMPLATE"+
-           "&text="+encodeURIComponent(t.label)+
-           "&dates="+start+"/"+end+
-           (t.repeat?"&recur="+encodeURIComponent("RRULE:FREQ=DAILY"):"")+
-           "&details="+encodeURIComponent("Rappel créé depuis Suivi");
-  }
-
-  function icsFile(t){
-    const lines=[
-      "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Suivi//FR","CALSCALE:GREGORIAN",
-      "BEGIN:VEVENT",
-      "UID:"+t.id+"@suivi",
-      "DTSTAMP:"+icsStamp(Date.now()),
-      "DTSTART:"+icsStamp(t.due),
-      "DTEND:"+icsStamp(t.due+15*6e4),
-      "SUMMARY:"+t.label.replace(/[\n,;]/g," "),
-      t.repeat?"RRULE:FREQ=DAILY":null,
-      "BEGIN:VALARM","TRIGGER:PT0M","ACTION:DISPLAY",
-      "DESCRIPTION:"+t.label.replace(/[\n,;]/g," "),
-      "END:VALARM","END:VEVENT","END:VCALENDAR"
-    ].filter(Boolean).join("\r\n");
-    const url=URL.createObjectURL(new Blob([lines],{type:"text/calendar"}));
-    const a=document.createElement("a");
-    a.href=url; a.download=t.label.replace(/[^\w -]/g,"").slice(0,30)+".ics"; a.click();
-    setTimeout(()=>URL.revokeObjectURL(url),2000);
-  }
-
-  function addToCalendar(t){
-    if(!t) return;
-    window.open(calendarUrl(t),"_blank","noopener");
-  }
-
-  /* ================= RAPPELS ================= */
-  const notifBtn=$("#notifBtn"), notifState=$("#notifState");
-  const FIRED_KEY="suivi.fired";
-  let fired={};
-  try{ fired=JSON.parse(localStorage.getItem(FIRED_KEY)||"{}"); }catch(e){}
-  const markFired=id=>{ fired[id]=Date.now(); try{ localStorage.setItem(FIRED_KEY,JSON.stringify(fired)); }catch(e){} };
-
-  const notifSupported = ("Notification" in window);
-
-  function notifPaint(){
-    if(!notifSupported){
-      notifBtn.style.display="none";
-      notifState.textContent="Ce navigateur ne gère pas les notifications.";
-      return;
-    }
-    const p=Notification.permission;
-    notifBtn.classList.toggle("on",p==="granted");
-    notifBtn.textContent = p==="granted" ? "Rappels actifs" : "Activer les rappels";
-    notifState.textContent = p==="granted"
-      ? "Alerte à l'heure exacte, uniquement si l'app est ouverte. Pour un rappel fiable téléphone verrouillé, utilisez le bouton Rappel de chaque tâche."
-      : p==="denied"
-        ? "Notifications refusées. Réautorisez-les dans les réglages du site, puis rouvrez l'app."
-        : "Filet de sécurité quand l'app est ouverte. Le rappel fiable passe par le calendrier (bouton Rappel sur chaque tâche).";
-  }
-
-  notifBtn.addEventListener("click",()=>{
-    if(!notifSupported) return;
-    Notification.requestPermission().then(()=>{ notifPaint(); checkDue(); });
-  });
-
-  function fire(t){
-    markFired(t.id);
-    try{
-      const n=new Notification(t.label,{
-        body:"Prévu à "+hm(t.due),
-        tag:"suivi-"+t.id,
-        icon:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23182028'/><circle cx='50' cy='50' r='26' fill='%23FF5B3D'/></svg>"
-      });
-      n.onclick=()=>{ window.focus(); tab(2); n.close(); };
-    }catch(e){}
-    if(navigator.vibrate) navigator.vibrate([120,60,120]);
-  }
-
-  function checkDue(){
-    if(!notifSupported || Notification.permission!=="granted") return;
-    const now=Date.now();
-    db.tasks.forEach(t=>{
-      if(t.done || fired[t.id]) return;
-      // uniquement à l'instant T : fenêtre de 90 s, pas de rattrapage des heures passées
-      if(t.due<=now && now-t.due<90000) fire(t);
-    });
-    // purge des marqueurs de plus de 3 jours
-    const cut=now-3*864e5, keys=Object.keys(fired);
-    if(keys.length>60) keys.forEach(k=>{ if(fired[k]<cut) delete fired[k]; });
-  }
-
-  // les tâches déjà en retard au lancement ne déclenchent pas d'alerte
-  db.tasks.forEach(t=>{ if(!t.done && t.due<=Date.now()-90000 && !fired[t.id]) fired[t.id]=Date.now(); });
-
-  notifPaint();
-  setInterval(checkDue,20000);
-
-  const now=new Date();
-  $("#tTime").value=pad(now.getHours())+":"+pad(now.getMinutes());
-  renderTab1(); renderTasks();
-  applyTheme();
-  setInterval(()=>{applyTheme();renderNext();renderTasks();},30000);
-})();
-</script></body></html>
+  $$("#tConst button").forEach(b=>b.addEventListener("cli
