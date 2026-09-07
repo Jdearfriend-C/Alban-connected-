@@ -385,6 +385,7 @@
     color:var(--ink);border-radius:8px;font:inherit;font-size:11px;letter-spacing:.1em;
     text-transform:uppercase;padding:11px 6px;cursor:pointer;
   }
+  #bkPull{flex:1 1 100%;border-color:var(--couche);color:var(--couche)}
   #bkState{font-size:12px;color:var(--graphite);margin-top:8px;line-height:1.45}
   #notifBox{margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)}
   #notifBtn{
@@ -617,6 +618,9 @@
       <div id="shareState"></div>
       <div id="backupBox">
         <div class="bkrow">
+          <button id="bkPull">⤓ Récupérer depuis le serveur</button>
+        </div>
+        <div class="bkrow">
           <button id="bkExport">Exporter</button>
           <span id="bkImportBtn">Importer<input type="file" id="bkFile" class="filepick" accept=".json,application/json"></span>
           <button id="bkRestore">Sauvegarde locale</button>
@@ -815,7 +819,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,ivTarget:null,birth:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="4.4";
+  const VERSION="4.5";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -1421,8 +1425,10 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(v.bottles==null&&db.bottles) push("bottles",db.bottles);
   }
 
+  let connectTimer=null;
   function connect(code){
     const url=dbUrl();
+    setBadge("wait","Connexion…","Connexion à l'espace « "+code+" »…");
     if(!url){ setBadge("","Local","Collez d'abord l'URL de votre base Realtime Database."); return; }
     if(!window.firebase){ setBadge("err","Erreur","Le module de synchronisation n'a pas pu être chargé. Vérifiez la connexion."); return; }
     try{
@@ -1439,8 +1445,13 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
         if(first){ first=false; seedRemote(v); }
         applyRemote(v);
       });
-      localStorage.setItem(SPACE_KEY,code);
+      try{ localStorage.setItem(SPACE_KEY,code); }catch(e){}
       $("#spaceBtn").textContent="Délier";
+      clearTimeout(connectTimer);
+      connectTimer=setTimeout(()=>{
+        if(badge.className!=="ok")
+          setBadge("err","Bloquée","Aucune réponse du serveur après 10 s. Cause probable : les protections du navigateur bloquent la connexion temps réel. Essayez « Récupérer depuis le serveur » ci-dessous, ou ouvrez l'app dans Chrome.");
+      },10000);
     }catch(e){ setBadge("err","Erreur",String(e.message||e)); }
   }
 
@@ -2133,23 +2144,4 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(isNaN(w)||w<=0){ $("#tCalc").textContent="Saisissez le poids pour appliquer la règle d'Appert."; return; }
     const v=appert(w,db.appert);
     $("#tCalc").innerHTML="Règle d'Appert : "+w+" ÷ 10 + "+db.appert+" = <b>"+v+" ml</b> par jour"+
-      (w>6000? " — au-delà de 6 kg, la règle n'est plus adaptée." : "");
-    $("#tTarget").value=v;
-    paintDose();
-  }
-
-
-  /* ---------- analyse du rythme réel ---------- */
-  let pendingIv=null;
-
-  function analyzeRhythm(days){
-    const today=sod(new Date()), gaps=[], perDay=[];
-    for(let i=0;i<days;i++){
-      const d0=today-i*864e5;
-      const list=db.entries.filter(e=>e.kinds.includes("manger")&&e.ts>=d0&&e.ts<d0+864e5)
-                           .sort((a,b)=>a.ts-b.ts);
-      if(!list.length) continue;
-      perDay.push(list.length);
-      for(let k=1;k<list.length;k++){
-        const g=(list[k].ts-list[k-1].ts)/36e5;
-        if(g>=0.5&&g<=8) gaps.push(g);   // on ignore les doublons et les trous 
+      (w>6000? " — au-delà de 6 kg, la règle n'est plus ada
