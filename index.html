@@ -378,6 +378,14 @@
   }
   #spaceGen{background:none;border:1px solid var(--rule);color:var(--graphite);border-radius:8px;font:inherit;font-size:12px;padding:12px 14px;cursor:pointer}
   #shareState{font-size:12px;color:var(--graphite);margin-top:10px}
+  #backupBox{margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)}
+  .bkrow{display:flex;gap:8px;flex-wrap:wrap}
+  .bkrow button,#bkImportBtn{
+    flex:1;position:relative;text-align:center;background:none;border:1px solid var(--rule);
+    color:var(--ink);border-radius:8px;font:inherit;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;padding:11px 6px;cursor:pointer;
+  }
+  #bkState{font-size:12px;color:var(--graphite);margin-top:8px;line-height:1.45}
   #notifBox{margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)}
   #notifBtn{
     background:none;border:1px solid var(--rule);color:var(--ink);border-radius:8px;font:inherit;
@@ -607,6 +615,14 @@
         <button id="spaceBtn">Relier</button>
       </div>
       <div id="shareState"></div>
+      <div id="backupBox">
+        <div class="bkrow">
+          <button id="bkExport">Exporter</button>
+          <span id="bkImportBtn">Importer<input type="file" id="bkFile" class="filepick" accept=".json,application/json"></span>
+          <button id="bkRestore">Sauvegarde locale</button>
+        </div>
+        <div id="bkState"></div>
+      </div>
       <div id="notifBox">
         <button id="notifBtn">Activer les rappels</button>
         <div id="notifState"></div>
@@ -799,7 +815,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,ivTarget:null,birth:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="4.3";
+  const VERSION="4.4";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -813,15 +829,31 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   db.entries.forEach(normalize);
   db.tasks.forEach(t=>{t.id=String(t.id||uid());});
   if(!Array.isArray(db.notes))db.notes=[];
-  const saveLocal=()=>store.set(JSON.stringify(db));
+  const BAK_KEY="suivi.v1.bak";
+  function saveLocal(){
+    const json=JSON.stringify(db);
+    // sauvegarde de secours dès que le jeu de données est significatif
+    try{
+      if(db.entries.length){
+        const bak=localStorage.getItem(BAK_KEY);
+        let prev=null; try{ prev=JSON.parse(bak||"null"); }catch(e){}
+        if(!prev || (prev.entries||[]).length<=db.entries.length)
+          localStorage.setItem(BAK_KEY,json);
+      }
+    }catch(e){}
+    try{ store.set(json); }
+    catch(e){                       // quota saturé : on libère les photos avant de réessayer
+      try{ localStorage.removeItem("suivi.photos"); store.set(json); }catch(e2){}
+    }
+  }
   let remote=null;                    // référence Firebase de l'espace, ou null
   const push=(path,val)=>{ if(remote){ try{ remote.child(path).set(val); }catch(e){} } };
   const drop=path=>{ if(remote){ try{ remote.child(path).remove(); }catch(e){} } };
 
   function putEntry(e){ saveLocal(); push("entries/"+e.id,e); }
-  function delEntry(id){ saveLocal(); drop("entries/"+id); }
+  function delEntry(id){ seen.add(id); saveSeen(); saveLocal(); drop("entries/"+id); }
   function putTask(t){ saveLocal(); push("tasks/"+t.id,t); }
-  function delTask(id){ saveLocal(); drop("tasks/"+id); }
+  function delTask(id){ seen.add(id); saveSeen(); saveLocal(); drop("tasks/"+id); }
   function putNote(v){ saveLocal(); push("note",v); }
   function putIv(v){ saveLocal(); push("iv",v); }
   const save=saveLocal;
@@ -1326,19 +1358,43 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(detail!==undefined) stateEl.textContent=detail;
   }
 
+  // identifiants déjà vus côté distant : permet de distinguer
+  // « supprimé par l'autre téléphone » de « pas encore envoyé »
+  const SEEN_KEY="suivi.seen";
+  let seen=new Set();
+  try{ seen=new Set(JSON.parse(localStorage.getItem(SEEN_KEY)||"[]")); }catch(e){}
+  function saveSeen(){
+    try{ localStorage.setItem(SEEN_KEY,JSON.stringify([...seen].slice(-4000))); }catch(e){}
+  }
+
+  function mergeList(localList, remoteList, kind){
+    const rIds=new Set(remoteList.map(x=>x.id));
+    remoteList.forEach(x=>seen.add(x.id));
+    const kept=[];
+    localList.forEach(x=>{
+      if(rIds.has(x.id)) return;              // présent des deux côtés : le distant fait foi
+      if(seen.has(x.id)) return;              // connu du distant puis retiré : suppression réelle
+      kept.push(x);                           // jamais parti : on le remonte
+      push(kind+"/"+x.id,x);
+    });
+    saveSeen();
+    return remoteList.concat(kept);
+  }
+
   function applyRemote(v){
     applying=true;
-    db.entries=Object.values(v.entries||{}).filter(Boolean).map(normalize);
-    db.tasks=Object.values(v.tasks||{}).filter(Boolean);
-    if(typeof v.iv==="number") db.iv=v.iv;
-    if(typeof v.ivAuto==="boolean") db.ivAuto=v.ivAuto;
-    if(typeof v.ivCouche==="number") db.ivCouche=v.ivCouche;
-    if(typeof v.ivTarget==="number"||v.ivTarget===null) db.ivTarget=v.ivTarget;
-    if(typeof v.birth==="number"||v.birth===null) db.birth=v.birth;
-    if(typeof v.target==="number"||v.target===null) db.target=v.target;
-    if(typeof v.weight==="number"||v.weight===null) db.weight=v.weight;
-    if(typeof v.appert==="number") db.appert=v.appert;
-    if(typeof v.bottles==="number"||v.bottles===null) db.bottles=v.bottles;
+    const rEntries=Object.values(v.entries||{}).filter(Boolean).map(normalize);
+    const rTasks=Object.values(v.tasks||{}).filter(Boolean);
+    db.entries=mergeList(db.entries,rEntries,"entries").sort((a,b)=>a.ts-b.ts);
+    db.tasks=mergeList(db.tasks,rTasks,"tasks");
+    // un réglage absent du distant n'efface jamais le réglage local : on le remonte
+    const scal=(key,type)=>{
+      if(typeof v[key]===type) db[key]=v[key];
+      else if(db[key]!=null) push(key,db[key]);
+    };
+    scal("iv","number"); scal("ivAuto","boolean"); scal("ivCouche","number");
+    scal("ivTarget","number"); scal("birth","number"); scal("target","number");
+    scal("weight","number"); scal("appert","number"); scal("bottles","number");
     // on n'écrase jamais la note pendant la frappe
     if(typeof v.note==="string" && document.activeElement!==nInput && v.note!==db.note){
       db.note=v.note; nInput.value=v.note; counts();
@@ -2096,59 +2152,4 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       perDay.push(list.length);
       for(let k=1;k<list.length;k++){
         const g=(list[k].ts-list[k-1].ts)/36e5;
-        if(g>=0.5&&g<=8) gaps.push(g);   // on ignore les doublons et les trous aberrants
-      }
-    }
-    if(gaps.length<4) return null;
-    gaps.sort((a,b)=>a-b);
-    const med=gaps.length%2 ? gaps[(gaps.length-1)/2]
-                            : (gaps[gaps.length/2-1]+gaps[gaps.length/2])/2;
-    const iv=Math.round(med*12)/12;      // arrondi aux 5 minutes
-    return {iv, n:gaps.length, jours:perDay.length,
-            parJour:perDay.reduce((a,c)=>a+c,0)/perDay.length};
-  }
-
-  function paintAnalysis(res){
-    const box=$("#tAnalysis");
-    if(res===undefined){
-      box.innerHTML = db.ivTarget>0
-        ? "Intervalle cible actuel : <b>"+fmtIv(db.ivTarget)+"</b>, issu de l'observation. <button id='tUndo'>Revenir au calcul automatique</button>"
-        : "";
-    }else if(!res){
-      box.innerHTML="Pas assez de repas enregistrés sur les 5 derniers jours pour dégager un rythme.";
-    }else{
-      pendingIv=res.iv;
-      box.innerHTML="Sur "+res.jours+" jour"+(res.jours>1?"s":"")+", "+res.parJour.toFixed(1)+
-        " biberons par jour et un écart médian de <b>"+fmtIv(res.iv)+"</b> ("+res.n+" intervalles). "+
-        "Le calcul théorique donne "+(db.bottles?fmtIv(24/db.bottles):"—")+"."+
-        "<button id='tApply'>Adopter "+fmtIv(res.iv)+" comme intervalle</button>";
-    }
-    const ap=$("#tApply"); if(ap) ap.addEventListener("click",()=>{
-      db.ivTarget=pendingIv; saveLocal(); push("ivTarget",db.ivTarget);
-      paintAnalysis(); paintDose(); renderTab1();
-    });
-    const un=$("#tUndo"); if(un) un.addEventListener("click",()=>{
-      db.ivTarget=null; saveLocal(); push("ivTarget",null);
-      paintAnalysis(); paintDose(); renderTab1();
-    });
-  }
-
-  $("#tAnalyze").addEventListener("click",()=>paintAnalysis(analyzeRhythm(5)));
-
-  function openTarget(){
-    $("#tWeight").value = db.weight||"";
-    $("#tTarget").value = db.target||"";
-    $$("#tConst button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.k===db.appert));
-    $("#tBottles").value = db.bottles||"";
-    pendingIv=null; paintAnalysis();
-    if(db.weight) paintCalc(); else $("#tCalc").textContent="Saisissez le poids pour appliquer la règle d'Appert.";
-    $("#tTarget").value = db.target||"";
-    paintDose();
-    $("#tsheet").classList.add("open");
-  }
-
-  $("#gauge").addEventListener("click",openTarget);
-  $("#tWeight").addEventListener("input",paintCalc);
-  $("#tBottles").addEventListener("input",paintDose);
-  $("#tTarget").addEventListener("input",paintDose);
-  $$("#tConst button").forEach(b=>b.addEventListener("cli
+        if(g>=0.5&&g<=8) gaps.push(g);   // on ignore les doublons et les trous 
