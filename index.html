@@ -208,19 +208,7 @@
   #tlab{position:absolute;right:0;font-size:9px;color:var(--signal);letter-spacing:.1em;text-transform:uppercase;background:var(--paper);padding:0 3px;transform:translateY(-50%)}
   /* ---------- vue rythme ---------- */
   #rAxis{display:flex;justify-content:space-between;font-size:9px;color:var(--graphite);
-    padding:0 0 6px 44px;letter-spacing:.06em}
-  .rrow{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-  .rlab{width:36px;flex:none;font-size:10px;color:var(--graphite);text-align:right;letter-spacing:.02em}
-  .rtrack{position:relative;flex:1;height:22px;background:var(--card);border-radius:4px;overflow:hidden}
-  .rnight{position:absolute;top:0;bottom:0;background:var(--sunk)}
-  .rgrid{position:absolute;top:0;bottom:0;width:1px;background:var(--rule);opacity:.6}
-  .rdot{
-    position:absolute;top:50%;border-radius:50%;background:var(--biberon);
-    transform:translate(-50%,-50%);cursor:pointer;border:1px solid var(--paper);
-  }
-  .rdot.timed{box-shadow:0 0 0 2px var(--couche)}
-  .rdot.hit{background:var(--ink)}
-  .rcnt{width:26px;flex:none;font-size:10px;color:var(--graphite);text-align:right;font-variant-numeric:tabular-nums}
+    padding:0 4.7% 6px 10%;letter-spacing:.06em}
   #rEmpty{font-size:13px;color:var(--graphite);padding:16px 0}
 
   #stSum{margin-top:22px;display:flex;gap:10px}
@@ -694,7 +682,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,ivTarget:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="3.7";
+  const VERSION="3.8";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -1339,12 +1327,14 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
   function buckets(){
     const D=dailyTotals();
+    delete D.ml[sod(new Date())]; delete D.bot[sod(new Date())];
+    delete D.dsum[sod(new Date())]; delete D.dn[sod(new Date())];
     const dur = stMetric==="dur";
     const daily = dur ? D.dsum : D.ml;
     const bot   = dur ? D.dn   : D.bot;
     const keys=Object.keys(daily).map(Number).sort((a,b)=>a-b);
     if(!keys.length) return [];
-    const today=sod(new Date()), out=[];
+    const today=sod(new Date())-864e5, out=[];   // la journée en cours est exclue
     if(gran()==="day"){
       const from=Math.max(keys[0], today-(stRange-1)*864e5);
       for(let t=from;t<=today;t+=864e5){
@@ -1382,7 +1372,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
         let sum=0, n=0, nb=0;
         for(let d=1;d<=31;d++){
           const t=new Date(y,mo,d).getTime();
-          if(new Date(t).getMonth()!==mo || t>sod(new Date())) break;
+          if(new Date(t).getMonth()!==mo || t>today) break;
           sum+=daily[t]||0; nb+=bot[t]||0; n++;
         }
         const vM = dur ? (nb? Math.round(sum/nb/60) : 0) : (n? Math.round(sum/n) : 0);
@@ -1416,7 +1406,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
   /* ---------- vue rythme : dispersion horaire ---------- */
   function rhythmDays(){
-    const today=sod(new Date()), out=[];
+    const today=sod(new Date())-864e5, out=[];   // la journée en cours est exclue
     const n=Math.min(stRange,60);
     for(let i=0;i<n;i++){
       const d0=today-i*864e5;
@@ -1427,61 +1417,98 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     return out;
   }
 
+  const RANK_COLORS=["#E8802B","#3B82C4","#2E8B94","#B45FA8","#5AA84F",
+                     "#D9534F","#8A7CD6","#C99A2E","#4B9FA6","#9C6B4A"];
+  const rankColor=i=>RANK_COLORS[i%RANK_COLORS.length];
+
   function renderRhythm(){
-    const days=rhythmDays();
+    const days=rhythmDays();               // du plus récent au plus ancien
     const any=days.some(d=>d.items.length);
-    const rows=$("#rRows");
+    const host=$("#rRows");
     if(!any){
-      rows.innerHTML='<div id="rEmpty">Aucun repas enregistré sur la période.</div>';
+      host.innerHTML='<div id="rEmpty">Aucun repas enregistré sur la période.</div>';
       $("#stRead").innerHTML='<div class="sub">Aucune donnée à afficher.</div>';
       $("#stSum").innerHTML=""; $("#stNote").textContent="";
       return;
     }
-    const pc=ts=>{const d=new Date(ts);return ((d.getHours()+d.getMinutes()/60)/24*100);};
-    rows.innerHTML=days.map(d=>{
-      const lab=new Date(d.d0).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric"}).replace(".","");
-      const dots=d.items.map(e=>{
-        const ml=(e.meal&&e.meal.ml)||0;
-        const size=Math.max(7,Math.min(13,7+ml/22));
-        return '<span class="rdot'+((e.meal&&e.meal.dur)?" timed":"")+(stSel===e.id?" hit":"")+'"'+
-          ' data-r="'+e.id+'" style="left:'+pc(e.ts).toFixed(2)+'%;width:'+size+'px;height:'+size+'px"></span>';
-      }).join("");
-      return '<div class="rrow"><span class="rlab">'+lab+'</span>'+
-        '<div class="rtrack">'+
-        '<div class="rnight" style="left:0;width:'+(NIGHT_END/24*100).toFixed(2)+'%"></div>'+
-        '<div class="rnight" style="left:'+(NIGHT_START/24*100).toFixed(2)+'%;right:0"></div>'+
-        [6,12,18].map(h=>'<div class="rgrid" style="left:'+(h/24*100).toFixed(2)+'%"></div>').join("")+
-        dots+'</div><span class="rcnt">'+(d.items.length||"")+'</span></div>';
-    }).join("");
+    const W=340, L=34, R=16, rowH=26, TOPM=4;
+    const plot=W-L-R, H=TOPM+days.length*rowH+4;
+    const x=h=>L+plot*h/24;
+    const y=i=>TOPM+i*rowH+rowH/2;
+    const hOf=ts=>{const d=new Date(ts);return d.getHours()+d.getMinutes()/60;};
 
-    rows.querySelectorAll(".rdot").forEach(el=>el.addEventListener("click",()=>{
-      stSel=el.dataset.r;
+    let g="";
+    // nuit + repères
+    g+='<rect x="'+L+'" y="0" width="'+(x(NIGHT_END)-L)+'" height="'+H+'" fill="var(--sunk)"/>';
+    g+='<rect x="'+x(NIGHT_START)+'" y="0" width="'+(W-R-x(NIGHT_START))+'" height="'+H+'" fill="var(--sunk)"/>';
+    [6,12,18].forEach(h=>{ g+='<line x1="'+x(h)+'" y1="0" x2="'+x(h)+'" y2="'+H+'" stroke="var(--rule)" stroke-width="1" opacity=".55"/>'; });
+
+    // lignes de liaison : même rang de biberon d'un jour à l'autre
+    const maxRank=Math.max(...days.map(d=>d.items.length));
+    for(let k=0;k<maxRank;k++){
+      let seg=[];
+      days.forEach((d,i)=>{
+        if(d.items[k]) seg.push([x(hOf(d.items[k].ts)), y(i)]);
+        else { if(seg.length>1) g+=poly(seg,rankColor(k)); seg=[]; }
+      });
+      if(seg.length>1) g+=poly(seg,rankColor(k));
+    }
+
+    // points
+    days.forEach((d,i)=>{
+      d.items.forEach((e,k)=>{
+        const ml=(e.meal&&e.meal.ml)||0, r=Math.max(3.5,Math.min(6.5,3.5+ml/45));
+        const cx=x(hOf(e.ts)), cy=y(i), sel=stSel===e.id;
+        g+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy+'" r="'+(sel?r+2:r).toFixed(1)+'" fill="'+rankColor(k)+'"'+
+           (sel?' stroke="var(--ink)" stroke-width="1.5"':'')+'/>';
+        g+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy+'" r="10" fill="transparent" data-r="'+e.id+'" style="cursor:pointer"/>';
+      });
+      const lab=new Date(d.d0).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric"}).replace(".","");
+      g+='<text x="'+(L-6)+'" y="'+(y(i)+3)+'" text-anchor="end" font-size="9" fill="var(--graphite)">'+lab+'</text>';
+      if(d.items.length)
+        g+='<text x="'+(W-2)+'" y="'+(y(i)+3)+'" text-anchor="end" font-size="9" fill="var(--graphite)">'+d.items.length+'</text>';
+    });
+
+    host.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block">'+g+'</svg>';
+
+    host.querySelectorAll("[data-r]").forEach(el=>el.addEventListener("click",()=>{
+      stSel=el.dataset.r; renderRhythm();
       const e=db.entries.find(x=>x.id===stSel);
-      rows.querySelectorAll(".rdot").forEach(x=>x.classList.toggle("hit",x.dataset.r===stSel));
-      if(e) $("#stRead").innerHTML=
-        '<div class="big mono">'+hm(e.ts)+' <span style="font-size:15px;color:var(--graphite)">· '+
-        ((e.meal&&e.meal.ml)||0)+' ml'+((e.meal&&e.meal.dur)?" · "+Math.max(1,Math.round(e.meal.dur/60))+" min":"")+'</span></div>'+
-        '<div class="sub">'+new Date(e.ts).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})+'</div>';
+      if(e){
+        const d0=sod(new Date(e.ts));
+        const sameDay=db.entries.filter(z=>z.kinds.includes("manger")&&z.ts>=d0&&z.ts<d0+864e5).sort((a,b)=>a.ts-b.ts);
+        const rank=sameDay.findIndex(z=>z.id===e.id)+1;
+        $("#stRead").innerHTML=
+          '<div class="big mono">'+hm(e.ts)+' <span style="font-size:15px;color:var(--graphite)">· '+
+          ((e.meal&&e.meal.ml)||0)+' ml'+((e.meal&&e.meal.dur)?" · "+Math.max(1,Math.round(e.meal.dur/60))+" min":"")+'</span></div>'+
+          '<div class="sub">'+new Date(e.ts).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})+
+          ' · biberon n°'+rank+' de la journée</div>';
+      }
     }));
 
-    // statistiques de rythme
-    let gaps=[], firsts=[], lasts=[], counts=[];
+    // indicateurs
+    let gaps=[], firsts=[], counts=[];
     days.forEach(d=>{
       if(!d.items.length) return;
       counts.push(d.items.length);
-      const h=t=>{const x=new Date(t);return x.getHours()+x.getMinutes()/60;};
-      firsts.push(h(d.items[0].ts)); lasts.push(h(d.items[d.items.length-1].ts));
+      const h=t=>{const z=new Date(t);return z.getHours()+z.getMinutes()/60;};
+      firsts.push(h(d.items[0].ts));
       for(let i=1;i<d.items.length;i++) gaps.push((d.items[i].ts-d.items[i-1].ts)/36e5);
     });
-    const moy=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+    const moy=a=>a.length?a.reduce((x2,y2)=>x2+y2,0)/a.length:0;
     const asHour=v=>pad(Math.floor(v))+"h"+pad(Math.round((v%1)*60));
     $("#stSum").innerHTML=
       '<div class="scard"><div class="k">Prises / jour</div><div class="v mono">'+moy(counts).toFixed(1)+'</div></div>'+
       '<div class="scard"><div class="k">Écart moyen</div><div class="v mono">'+(gaps.length?fmtIv(moy(gaps)):"—")+'</div></div>'+
       '<div class="scard"><div class="k">1re prise</div><div class="v mono">'+(firsts.length?asHour(moy(firsts)):"—")+'</div></div>';
-    $("#stNote").textContent="Un point par biberon, positionné à son heure de prise. Taille du point : quantité. Contour turquoise : prise chronométrée. Zones sombres : la nuit (21h30–7h).";
-    if(!stSel || !db.entries.some(x=>x.id===stSel))
+    $("#stNote").textContent="Un point par biberon, à son heure de prise. Une couleur par rang dans la journée : les lignes suivent le même biberon d'un jour à l'autre et rendent visibles les glissements. Taille du point : quantité. Journée en cours exclue.";
+    if(!stSel || !db.entries.some(z=>z.id===stSel))
       $("#stRead").innerHTML='<div class="sub">Touchez un point pour le détail.</div>';
+  }
+
+  function poly(pts,color){
+    return '<polyline points="'+pts.map(p=>p[0].toFixed(1)+","+p[1]).join(" ")+
+           '" fill="none" stroke="'+color+'" stroke-width="1.4" opacity=".45" stroke-linecap="round"/>';
   }
 
   function renderStats(){
