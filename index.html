@@ -53,7 +53,12 @@
   #nudge,#tmAdd{position:relative}
   #stack{position:relative;width:68px;height:80px;flex:none}
   #stack .filepick{height:68px}
-  .ps{position:absolute;border-radius:8px;background:var(--card);border:1px solid var(--rule)}
+  .ps{position:absolute;border-radius:8px;background:var(--card);border:1px solid var(--rule);overflow:hidden}
+  .psimg{width:100%;height:100%;object-fit:cover;display:block}
+  .veil{position:absolute;inset:0;background:#0E1319;opacity:0}
+  .ps2.filled .veil{opacity:.4}
+  .ps3.filled .veil{opacity:.62}
+  .ps2.filled,.ps3.filled{border-style:solid;opacity:1}
   .ps3{left:9px;right:9px;top:14px;height:64px;opacity:.45}
   .ps2{left:5px;right:5px;top:10px;height:64px;opacity:.7}
   .ps1{
@@ -231,7 +236,7 @@
   #tmAge{font-size:34px;font-weight:500;letter-spacing:-.03em;line-height:1.05;padding:0 20px}
   #tmSub{font-size:13px;color:var(--graphite);margin-top:6px;padding:0 20px}
   #tmFrame{margin:22px 32px 0;border-radius:8px;overflow:hidden;background:var(--card);aspect-ratio:1/1}
-  #tmImg{width:100%;height:100%;object-fit:cover;display:block}
+  #tmImg{width:100%;height:100%;object-fit:cover;display:block;transition:opacity .2s ease}
   #tmFrame.loading{position:relative}
   #tmFrame.loading::after{
     content:"Téléchargement…";position:absolute;inset:0;display:flex;align-items:center;
@@ -239,17 +244,18 @@
   }
   #tmRailWrap{position:relative;margin-top:auto;padding-top:26px}
   #tmRail{
-    display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:0;
-    scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:10px calc(50% - 23px);
+    position:relative;overflow:hidden;height:52px;
+    touch-action:pan-y;cursor:grab;-webkit-user-select:none;user-select:none;
   }
-  #tmRail::-webkit-scrollbar{display:none}
+  #tmRail.grabbing{cursor:grabbing}
+  #tmTrack{position:absolute;left:50%;top:0;height:100%;display:flex;will-change:transform}
   .tick{
-    width:46px;flex:none;scroll-snap-align:center;display:flex;align-items:center;
-    justify-content:center;gap:9px;cursor:pointer;
+    width:46px;flex:none;display:flex;align-items:center;justify-content:center;gap:9px;
   }
   .tick i{display:block;width:1px;height:11px;background:var(--rule)}
   .tick b{display:block;width:2px;height:26px;background:var(--graphite);border-radius:2px}
   .tick.on b{background:var(--signal);height:34px}
+  .tick b,.tick.on b{transition:height .16s ease,background .16s ease}
   #tmNote{font-size:12px;color:var(--graphite);margin-top:16px;padding:0 24px;line-height:1.5}
 
   /* ---------- page statistiques ---------- */
@@ -557,8 +563,8 @@
   </div>
   <div id="ident">
     <div id="stack">
-      <div class="ps ps3"></div>
-      <div class="ps ps2"></div>
+      <div class="ps ps3"><img class="psimg" id="idImg3" alt="" hidden><span class="veil"></span></div>
+      <div class="ps ps2"><img class="psimg" id="idImg2" alt="" hidden><span class="veil"></span></div>
       <div class="ps ps1" id="idPhoto">
         <img id="idImg" alt="" hidden>
       </div>
@@ -699,7 +705,7 @@
     </div>
     <input type="date" id="pDate" class="vh">
     <div id="tmFrame"><img id="tmImg" alt=""></div>
-    <div id="tmRailWrap"><div id="tmRail"></div></div>
+    <div id="tmRailWrap"><div id="tmRail"><div id="tmTrack"></div></div></div>
     <div id="tmNote"></div>
   </div>
 </section>
@@ -841,7 +847,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,ivTarget:null,birth:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="4.8";
+  const VERSION="5.3";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -1410,11 +1416,18 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
 
   /* --- photos partagées : index léger dans l'espace, images à part --- */
+  // le code est lu du stockage : les images restent accessibles
+  // même si la connexion temps réel n'est pas établie
+  function currentCode(){
+    if(spaceCode) return spaceCode;
+    try{ return localStorage.getItem("suivi.space")||""; }catch(e){ return ""; }
+  }
   function photoRestUrl(id){
     let v=""; try{ v=localStorage.getItem("suivi.dburl")||""; }catch(e){}
     const base=(v||DATABASE_URL||"").trim().replace(/\/+$/,"");
-    if(!base||!spaceCode) return null;
-    return base+"/photos/"+spaceCode+"/"+id+".json";
+    const code=currentCode();
+    if(!base||!code) return null;
+    return base+"/photos/"+code+"/"+id+".json";
   }
 
   function uploadPhoto(p){
@@ -1424,29 +1437,54 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     fetch(u,{method:"PUT",body:JSON.stringify(p.src)}).catch(()=>{});
   }
 
-  let fetching=new Set();
-  function fetchPhoto(p){
-    if(p.src||fetching.has(p.id)) return;
-    const u=photoRestUrl(p.id);
-    if(!u) return;
-    fetching.add(p.id);
-    fetch(u).then(r=>r.json()).then(src=>{
-      fetching.delete(p.id);
-      if(typeof src!=="string") return;
-      p.src=src; savePhotos();
-      renderIdent();
-      if($("#tm").classList.contains("open")) renderTM();
-    }).catch(()=>fetching.delete(p.id));
+  /* file d'attente : une requête à la fois, la photo regardée passe devant */
+  let pQueue=[], pBusy=false, pDir=1, prefetchTimer=null;
+
+  const frugal=()=>{ const c=navigator.connection;
+    return !!(c && (c.saveData || /(^|-)2g$/.test(c.effectiveType||""))); };
+
+  function wantPhoto(i,front){
+    const p=photos[i];
+    if(!p || p.src) return;
+    pQueue=pQueue.filter(x=>x!==p.id);
+    front ? pQueue.unshift(p.id) : pQueue.push(p.id);
+    pump();
   }
+
+  function pump(){
+    if(pBusy) return;
+    const id=pQueue.shift();
+    if(!id) return;
+    const p=photos.find(x=>x.id===id), u=photoRestUrl(id);
+    if(!p || p.src || !u) return pump();
+    pBusy=true;
+    fetch(u).then(r=>r.json()).then(src=>{
+      pBusy=false;
+      if(typeof src==="string"){
+        p.src=src; savePhotos(); renderIdent();
+        // rafraîchir l'affichage seulement si c'est la photo regardée
+        if($("#tm").classList.contains("open") && photos[tmIndex] && photos[tmIndex].id===id)
+          showPhoto(tmIndex,false);
+      }
+      pump();
+    }).catch(()=>{ pBusy=false; pump(); });
+  }
+
+  // voisines : dans le sens du déplacement d'abord, jamais en réseau contraint
+  function prefetchAround(i){
+    if(frugal()) return;
+    (pDir>=0 ? [i+1,i-1,i+2] : [i-1,i+1,i-2]).forEach(k=>wantPhoto(k,false));
+  }
+
+  const fetchPhoto=p=>wantPhoto(photos.indexOf(p),true);
 
   // récupère d'abord la photo affichée, puis les autres au fil de l'eau
   function syncPhotos(index){
-    if(!spaceCode) return;
-    const missing=photos.filter(p=>!p.src);
-    if(!missing.length) return;
-    const now=(typeof index==="number"&&photos[index]&&!photos[index].src)?photos[index]:missing[missing.length-1];
-    fetchPhoto(now);
-    missing.filter(p=>p!==now).slice(-3).forEach((p,i)=>setTimeout(()=>fetchPhoto(p),400*(i+1)));
+    if(!currentCode()) return;
+    const i=(typeof index==="number") ? index : photos.length-1;
+    wantPhoto(i,true);                                   // priorité absolue
+    clearTimeout(prefetchTimer);
+    prefetchTimer=setTimeout(()=>prefetchAround(i),350); // voisines une fois posé
   }
 
   function mergePhotoIndex(idx){
@@ -1619,6 +1657,13 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     let last=null;
     for(let i=photos.length-1;i>=0;i--){ if(photos[i].src){ last=photos[i]; break; } }
     if(!last && photos.length && typeof syncPhotos==="function") syncPhotos(photos.length-1);
+    // les deux photos précédentes, visibles en perspective sous la plus récente
+    const avec=photos.filter(p=>p.src);
+    [[2,"#idImg2",".ps2"],[3,"#idImg3",".ps3"]].forEach(([rang,imgSel,boxSel])=>{
+      const p=avec[avec.length-rang], el=$(imgSel), b=document.querySelector(boxSel);
+      if(p){ el.src=p.src; el.hidden=false; b.classList.add("filled"); }
+      else { el.hidden=true; el.removeAttribute("src"); b.classList.remove("filled"); }
+    });
     if(last){ img.src=last.src; img.hidden=false; box.classList.add("filled"); $("#idFile").hidden=true; }
     else { img.hidden=true; box.classList.remove("filled"); $("#idFile").hidden=false; }
     $("#photoDue").hidden = !(photoDue() && photos.length);
@@ -1692,7 +1737,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   });
 
   /* --- time machine --- */
-  let tmIndex=0, tmScrollTimer=null;
+  let tmIndex=0;
 
   $("#stack").addEventListener("click",ev=>{
     if(!photos.length) return;            // l'input superposé ouvre le sélecteur
@@ -1702,43 +1747,127 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   });
   $("#tmBack").addEventListener("click",()=>$("#tm").classList.remove("open"));
 
-  function renderTM(scrollToIndex){
+  const STEP=46;
+  let pos=0, dragging=false, animId=null, settleTimer=null;
+  const rAF=(f)=> (window.requestAnimationFrame||(g=>setTimeout(()=>g(Date.now()),16)))(f);
+  const cAF=(i)=>{ if(window.cancelAnimationFrame) window.cancelAnimationFrame(i); else clearTimeout(i); };
+  const nowMs=()=> (window.performance&&performance.now)?performance.now():Date.now();
+
+  function applyPos(){
+    const tr=$("#tmTrack");
+    if(tr) tr.style.transform="translateX("+(-(pos*STEP+STEP/2))+"px)";
+    const i=Math.round(pos);
+    $$("#tmRail .tick").forEach(t=>t.classList.toggle("on",+t.dataset.i===i));
+  }
+
+  let loadTimer=null;
+  function showPhoto(i,fetchNow){
+    const p=photos[i]; if(!p) return;
+    clearTimeout(loadTimer);
+    const a=ageAt(p.ts);
+    $("#tmAge").textContent = a? ageBig(a) : new Date(p.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long"});
+    $("#tmSub").textContent = (a? (ageSmall(a)? ageSmall(a)+" · ":"") : "")+
+      new Date(p.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+    const img=$("#tmImg"), frame=$("#tmFrame");
+    frame.classList.remove("loading");
+    if(p.src){
+      if(img.getAttribute("src")!==p.src){ img.src=p.src; }
+      img.style.opacity="1";
+    }else{
+      img.removeAttribute("src"); img.style.opacity="0";
+      // rien n'est demandé tant qu'on glisse : ni requête, ni voile
+      if(fetchNow && typeof syncPhotos==="function"){
+        loadTimer=setTimeout(()=>{ if(!photos[i]||!photos[i].src) frame.classList.add("loading"); },250);
+        syncPhotos(i);
+      }
+    }
+  }
+
+  function buildRail(){
+    const tr=$("#tmTrack");
+    if(tr.childElementCount===photos.length) return;
+    tr.innerHTML=photos.map((_,i)=>
+      '<div class="tick" data-i="'+i+'"><i></i><b></b><i></i></div>').join("");
+    $$("#tmRail .tick").forEach(t=>t.addEventListener("click",()=>{
+      if(dragging) return;
+      glideTo(+t.dataset.i);
+    }));
+  }
+
+  function glideTo(target,ms){
+    target=Math.max(0,Math.min(target,photos.length-1));
+    cAF(animId);
+    const from=pos, delta=target-from, t0=nowMs();
+    const dur=ms||Math.min(520,180+Math.abs(delta)*90);
+    (function step(now){
+      const k=Math.min(1,(now-t0)/dur);
+      const e=1-Math.pow(1-k,3);                  // décélération
+      pos=from+delta*e; applyPos();
+      const cur=Math.round(pos);
+      if(cur!==tmIndex){ pDir=cur>tmIndex?1:-1; tmIndex=cur; showPhoto(cur,false); }
+      if(k<1) animId=rAF(step);
+      else{ pos=target; tmIndex=target; applyPos(); showPhoto(target,true); }   // arrivée : on charge
+    })(nowMs());
+  }
+
+  function renderTM(goTo){
     if(!photos.length){
       $("#tmAge").textContent="Aucune photo";
       $("#tmSub").textContent="";
       $("#tmImg").removeAttribute("src");
-      $("#tmRail").innerHTML="";
+      $("#tmTrack").innerHTML="";
       $("#tmNote").textContent="Ajoutez une première photo pour lancer la chronologie.";
       return;
     }
     tmIndex=Math.max(0,Math.min(tmIndex,photos.length-1));
-    const p=photos[tmIndex], a=ageAt(p.ts);
-    $("#tmAge").textContent = a? ageBig(a) : new Date(p.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long"});
-    $("#tmSub").textContent = (a? (ageSmall(a)? ageSmall(a)+" · ":"") : "")+
-      new Date(p.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
-    if(p.src){ $("#tmImg").src=p.src; $("#tmFrame").classList.remove("loading"); }
-    else { $("#tmImg").removeAttribute("src"); $("#tmFrame").classList.add("loading");
-           if(typeof syncPhotos==="function") syncPhotos(tmIndex); }
-
-    $("#tmRail").innerHTML=photos.map((_,i)=>
-      '<div class="tick'+(i===tmIndex?" on":"")+'" data-i="'+i+'"><i></i><b></b><i></i></div>').join("");
-    $$("#tmRail .tick").forEach(t=>t.addEventListener("click",()=>{
-      tmIndex=+t.dataset.i; renderTM(true);
-    }));
+    buildRail();
+    if(!dragging){ pos=tmIndex; applyPos(); }
+    showPhoto(tmIndex,true);
 
     const jours=Math.floor((Date.now()-photos[photos.length-1].ts)/864e5);
     $("#tmNote").textContent = photoDue()
       ? "Dernière photo il y a "+jours+" jour"+(jours>1?"s":"")+" — c'est le moment d'en ajouter une."
       : "Prochaine photo conseillée dans "+(14-jours)+" jour"+((14-jours)>1?"s":"")+".";
-
-    if(scrollToIndex){
-      const rail=$("#tmRail");
-      requestAnimationFrame(()=>{
-        const el=rail.querySelector('[data-i="'+tmIndex+'"]');
-        if(el) rail.scrollLeft = el.offsetLeft - rail.clientWidth/2 + el.offsetWidth/2;
-      });
-    }
   }
+
+  /* --- glissement aimanté --- */
+  (function(){
+    const rail=$("#tmRail");
+    let startX=0, startPos=0, lastX=0, lastT=0, vel=0, id=null;
+
+    rail.addEventListener("pointerdown",e=>{
+      if(!photos.length) return;
+      dragging=true; cAF(animId);
+      id=e.pointerId; rail.setPointerCapture(id);
+      startX=lastX=e.clientX; lastT=nowMs(); vel=0; startPos=pos;
+      rail.classList.add("grabbing");
+      clearTimeout(settleTimer);
+    });
+
+    rail.addEventListener("pointermove",e=>{
+      if(!dragging) return;
+      const now=nowMs(), dt=Math.max(1,now-lastT);
+      vel=(e.clientX-lastX)/dt;                   // px/ms
+      lastX=e.clientX; lastT=now;
+      pos=Math.max(-0.35,Math.min(photos.length-0.65, startPos-(e.clientX-startX)/STEP));
+      applyPos();
+      const cur=Math.round(pos);
+      if(cur!==tmIndex && photos[cur]){ pDir=cur>tmIndex?1:-1; tmIndex=cur; showPhoto(cur,false); }
+    });
+
+    function end(){
+      if(!dragging) return;
+      dragging=false; rail.classList.remove("grabbing");
+      try{ rail.releasePointerCapture(id); }catch(e){}
+      // élan : sous 0,25 px/ms on aimante simplement au plus proche
+      const flick = Math.abs(vel)<0.25 ? 0
+                  : Math.max(-3,Math.min(3,Math.round(-vel*1.2)));
+      glideTo(Math.round(pos)+flick);
+    }
+    rail.addEventListener("pointerup",end);
+    rail.addEventListener("pointercancel",end);
+    rail.addEventListener("lostpointercapture",end);
+  })();
 
   /* --- dater une photo --- */
   $("#tmDate").addEventListener("click",()=>{
@@ -1762,20 +1891,6 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(typeof push==="function") push("photoIndex/"+p.id,p.ts);
     tmIndex=Math.max(0,photos.findIndex(x=>x.id===p.id));
     renderIdent(); renderTM(true);
-  });
-
-  // le rail commande la sélection
-  $("#tmRail").addEventListener("scroll",()=>{
-    clearTimeout(tmScrollTimer);
-    tmScrollTimer=setTimeout(()=>{
-      const rail=$("#tmRail"), c=rail.scrollLeft+rail.clientWidth/2;
-      let best=0, dist=1e9;
-      $$("#tmRail .tick").forEach(t=>{
-        const d=Math.abs(t.offsetLeft+t.offsetWidth/2-c);
-        if(d<dist){ dist=d; best=+t.dataset.i; }
-      });
-      if(best!==tmIndex){ tmIndex=best; renderTM(); }
-    },90);
   });
 
   /* ================= STATISTIQUES ================= */
