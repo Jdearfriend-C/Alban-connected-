@@ -2144,4 +2144,280 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(isNaN(w)||w<=0){ $("#tCalc").textContent="Saisissez le poids pour appliquer la règle d'Appert."; return; }
     const v=appert(w,db.appert);
     $("#tCalc").innerHTML="Règle d'Appert : "+w+" ÷ 10 + "+db.appert+" = <b>"+v+" ml</b> par jour"+
-      (w>6000? " — au-delà de 6 kg, la règle n'est plus ada
+      (w>6000? " — au-delà de 6 kg, la règle n'est plus adaptée." : "");
+    $("#tTarget").value=v;
+    paintDose();
+  }
+
+
+  /* ---------- analyse du rythme réel ---------- */
+  let pendingIv=null;
+
+  function analyzeRhythm(days){
+    const today=sod(new Date()), gaps=[], perDay=[];
+    for(let i=0;i<days;i++){
+      const d0=today-i*864e5;
+      const list=db.entries.filter(e=>e.kinds.includes("manger")&&e.ts>=d0&&e.ts<d0+864e5)
+                           .sort((a,b)=>a.ts-b.ts);
+      if(!list.length) continue;
+      perDay.push(list.length);
+      for(let k=1;k<list.length;k++){
+        const g=(list[k].ts-list[k-1].ts)/36e5;
+        if(g>=0.5&&g<=8) gaps.push(g);   // on ignore les doublons et les trous aberrants
+      }
+    }
+    if(gaps.length<4) return null;
+    gaps.sort((a,b)=>a-b);
+    const med=gaps.length%2 ? gaps[(gaps.length-1)/2]
+                            : (gaps[gaps.length/2-1]+gaps[gaps.length/2])/2;
+    const iv=Math.round(med*12)/12;      // arrondi aux 5 minutes
+    return {iv, n:gaps.length, jours:perDay.length,
+            parJour:perDay.reduce((a,c)=>a+c,0)/perDay.length};
+  }
+
+  function paintAnalysis(res){
+    const box=$("#tAnalysis");
+    if(res===undefined){
+      box.innerHTML = db.ivTarget>0
+        ? "Intervalle cible actuel : <b>"+fmtIv(db.ivTarget)+"</b>, issu de l'observation. <button id='tUndo'>Revenir au calcul automatique</button>"
+        : "";
+    }else if(!res){
+      box.innerHTML="Pas assez de repas enregistrés sur les 5 derniers jours pour dégager un rythme.";
+    }else{
+      pendingIv=res.iv;
+      box.innerHTML="Sur "+res.jours+" jour"+(res.jours>1?"s":"")+", "+res.parJour.toFixed(1)+
+        " biberons par jour et un écart médian de <b>"+fmtIv(res.iv)+"</b> ("+res.n+" intervalles). "+
+        "Le calcul théorique donne "+(db.bottles?fmtIv(24/db.bottles):"—")+"."+
+        "<button id='tApply'>Adopter "+fmtIv(res.iv)+" comme intervalle</button>";
+    }
+    const ap=$("#tApply"); if(ap) ap.addEventListener("click",()=>{
+      db.ivTarget=pendingIv; saveLocal(); push("ivTarget",db.ivTarget);
+      paintAnalysis(); paintDose(); renderTab1();
+    });
+    const un=$("#tUndo"); if(un) un.addEventListener("click",()=>{
+      db.ivTarget=null; saveLocal(); push("ivTarget",null);
+      paintAnalysis(); paintDose(); renderTab1();
+    });
+  }
+
+  $("#tAnalyze").addEventListener("click",()=>paintAnalysis(analyzeRhythm(5)));
+
+  function openTarget(){
+    $("#tWeight").value = db.weight||"";
+    $("#tTarget").value = db.target||"";
+    $$("#tConst button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.k===db.appert));
+    $("#tBottles").value = db.bottles||"";
+    pendingIv=null; paintAnalysis();
+    if(db.weight) paintCalc(); else $("#tCalc").textContent="Saisissez le poids pour appliquer la règle d'Appert.";
+    $("#tTarget").value = db.target||"";
+    paintDose();
+    $("#tsheet").classList.add("open");
+  }
+
+  $("#gauge").addEventListener("click",openTarget);
+  $("#tWeight").addEventListener("input",paintCalc);
+  $("#tBottles").addEventListener("input",paintDose);
+  $("#tTarget").addEventListener("input",paintDose);
+  $$("#tConst button").forEach(b=>b.addEventListener("click",()=>{
+    db.appert=+b.dataset.k; paintCalc();
+  }));
+  $("#tClose").addEventListener("click",()=>$("#tsheet").classList.remove("open"));
+  $("#tsheet").addEventListener("click",ev=>{ if(ev.target===$("#tsheet")) $("#tsheet").classList.remove("open"); });
+  $("#tSave").addEventListener("click",()=>{
+    const w=parseInt($("#tWeight").value,10), t=parseInt($("#tTarget").value,10),
+          n=parseInt($("#tBottles").value,10);
+    db.weight=isNaN(w)?null:w;
+    db.target=isNaN(t)?null:t;
+    db.bottles=(isNaN(n)||n<=0)?null:n;
+    saveLocal(); push("weight",db.weight); push("target",db.target);
+    push("appert",db.appert); push("bottles",db.bottles);
+    $("#tsheet").classList.remove("open");
+    renderTab1();
+  });
+
+  /* ================= RAPPEL CALENDRIER ================= */
+  function icsStamp(ts){
+    const d=new Date(ts);
+    return d.getUTCFullYear()+pad(d.getUTCMonth()+1)+pad(d.getUTCDate())+"T"+
+           pad(d.getUTCHours())+pad(d.getUTCMinutes())+"00Z";
+  }
+
+  function calendarUrl(t){
+    const start=icsStamp(t.due), end=icsStamp(t.due+15*6e4);
+    return "https://calendar.google.com/calendar/render?action=TEMPLATE"+
+           "&text="+encodeURIComponent(t.label)+
+           "&dates="+start+"/"+end+
+           (t.repeat?"&recur="+encodeURIComponent("RRULE:FREQ=DAILY"):"")+
+           "&details="+encodeURIComponent("Rappel créé depuis Suivi");
+  }
+
+  function icsFile(t){
+    const lines=[
+      "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Suivi//FR","CALSCALE:GREGORIAN",
+      "BEGIN:VEVENT",
+      "UID:"+t.id+"@suivi",
+      "DTSTAMP:"+icsStamp(Date.now()),
+      "DTSTART:"+icsStamp(t.due),
+      "DTEND:"+icsStamp(t.due+15*6e4),
+      "SUMMARY:"+t.label.replace(/[\n,;]/g," "),
+      t.repeat?"RRULE:FREQ=DAILY":null,
+      "BEGIN:VALARM","TRIGGER:PT0M","ACTION:DISPLAY",
+      "DESCRIPTION:"+t.label.replace(/[\n,;]/g," "),
+      "END:VALARM","END:VEVENT","END:VCALENDAR"
+    ].filter(Boolean).join("\r\n");
+    const url=URL.createObjectURL(new Blob([lines],{type:"text/calendar"}));
+    const a=document.createElement("a");
+    a.href=url; a.download=t.label.replace(/[^\w -]/g,"").slice(0,30)+".ics"; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+  }
+
+  function addToCalendar(t){
+    if(!t) return;
+    window.open(calendarUrl(t),"_blank","noopener");
+  }
+
+
+  /* ================= SAUVEGARDE / RESTAURATION ================= */
+  function mergeInto(data){
+    if(!data||typeof data!=="object") return 0;
+    let added=0;
+    const ids=new Set(db.entries.map(e=>e.id));
+    (data.entries||[]).forEach(e=>{
+      if(!e||!e.id||ids.has(e.id)) return;
+      db.entries.push(normalize(e)); ids.add(e.id); push("entries/"+e.id,normalize(e)); added++;
+    });
+    const tids=new Set(db.tasks.map(t=>t.id));
+    (data.tasks||[]).forEach(t=>{
+      if(!t||!t.id||tids.has(t.id)) return;
+      db.tasks.push(t); tids.add(t.id); push("tasks/"+t.id,t); added++;
+    });
+    ["target","weight","appert","bottles","birth","ivCouche","ivTarget"].forEach(k=>{
+      if(db[k]==null && data[k]!=null){ db[k]=data[k]; push(k,data[k]); }
+    });
+    if(!db.note && data.note){ db.note=data.note; push("note",data.note); }
+    db.entries.sort((a,b)=>a.ts-b.ts);
+    saveLocal(); renderTab1(); renderTasks();
+    return added;
+  }
+
+  $("#bkPull").addEventListener("click",()=>{
+    const url=(function(){ let v=""; try{ v=localStorage.getItem("suivi.dburl")||""; }catch(e){} return (v||DATABASE_URL||"").trim().replace(/\/+$/,""); })();
+    const code=$("#spaceCode").value.trim().toLowerCase().replace(/[^a-z0-9-]/g,"");
+    if(!url||code.length<4){ $("#bkState").textContent="Renseignez l'adresse et le code au-dessus."; return; }
+    $("#bkState").textContent="Lecture du serveur…";
+    fetch(url+"/spaces/"+code+".json")
+      .then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+      .then(v=>{
+        if(!v){ $("#bkState").textContent="L'espace « "+code+" » est vide sur le serveur."; return; }
+        const data={
+          entries:Object.values(v.entries||{}).filter(Boolean),
+          tasks:Object.values(v.tasks||{}).filter(Boolean),
+          note:v.note, target:v.target, weight:v.weight, appert:v.appert,
+          bottles:v.bottles, birth:v.birth, ivCouche:v.ivCouche, ivTarget:v.ivTarget
+        };
+        const n=mergeInto(data);
+        $("#bkState").textContent = n? n+" éléments récupérés depuis le serveur."
+                                     : "Rien de nouveau : l'app a déjà tout ce que contient le serveur.";
+      })
+      .catch(e=>{ $("#bkState").textContent="Échec de la lecture : "+e.message+". Vérifiez le code, ou essayez dans Chrome."; });
+  });
+
+  $("#bkExport").addEventListener("click",()=>{
+    const url=URL.createObjectURL(new Blob([JSON.stringify(db)],{type:"application/json"}));
+    const a=document.createElement("a");
+    a.href=url; a.download="suivi-"+new Date().toISOString().slice(0,10)+".json"; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    $("#bkState").textContent=db.entries.length+" entrées exportées.";
+  });
+
+  $("#bkFile").addEventListener("change",ev=>{
+    const f=ev.target.files&&ev.target.files[0]; ev.target.value="";
+    if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      try{
+        const n=mergeInto(JSON.parse(rd.result));
+        $("#bkState").textContent = n? n+" éléments restaurés." : "Rien de nouveau à restaurer.";
+      }catch(e){ $("#bkState").textContent="Fichier illisible."; }
+    };
+    rd.readAsText(f);
+  });
+
+  $("#bkRestore").addEventListener("click",()=>{
+    let bak=null;
+    try{ bak=JSON.parse(localStorage.getItem(BAK_KEY)||"null"); }catch(e){}
+    if(!bak){ $("#bkState").textContent="Aucune sauvegarde locale sur cet appareil."; return; }
+    const n=mergeInto(bak);
+    $("#bkState").textContent = n? n+" éléments récupérés depuis la sauvegarde locale."
+                                 : "La sauvegarde locale ne contient rien de plus que l'app.";
+  });
+
+  /* ================= RAPPELS ================= */
+  const notifBtn=$("#notifBtn"), notifState=$("#notifState");
+  const FIRED_KEY="suivi.fired";
+  let fired={};
+  try{ fired=JSON.parse(localStorage.getItem(FIRED_KEY)||"{}"); }catch(e){}
+  const markFired=id=>{ fired[id]=Date.now(); try{ localStorage.setItem(FIRED_KEY,JSON.stringify(fired)); }catch(e){} };
+
+  const notifSupported = ("Notification" in window);
+
+  function notifPaint(){
+    if(!notifSupported){
+      notifBtn.style.display="none";
+      notifState.textContent="Ce navigateur ne gère pas les notifications.";
+      return;
+    }
+    const p=Notification.permission;
+    notifBtn.classList.toggle("on",p==="granted");
+    notifBtn.textContent = p==="granted" ? "Rappels actifs" : "Activer les rappels";
+    notifState.textContent = p==="granted"
+      ? "Alerte à l'heure exacte, uniquement si l'app est ouverte. Pour un rappel fiable téléphone verrouillé, utilisez le bouton Rappel de chaque tâche."
+      : p==="denied"
+        ? "Notifications refusées. Réautorisez-les dans les réglages du site, puis rouvrez l'app."
+        : "Filet de sécurité quand l'app est ouverte. Le rappel fiable passe par le calendrier (bouton Rappel sur chaque tâche).";
+  }
+
+  notifBtn.addEventListener("click",()=>{
+    if(!notifSupported) return;
+    Notification.requestPermission().then(()=>{ notifPaint(); checkDue(); });
+  });
+
+  function fire(t){
+    markFired(t.id);
+    try{
+      const n=new Notification(t.label,{
+        body:"Prévu à "+hm(t.due),
+        tag:"suivi-"+t.id,
+        icon:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23182028'/><circle cx='50' cy='50' r='26' fill='%23FF5B3D'/></svg>"
+      });
+      n.onclick=()=>{ window.focus(); tab(2); n.close(); };
+    }catch(e){}
+    if(navigator.vibrate) navigator.vibrate([120,60,120]);
+  }
+
+  function checkDue(){
+    if(!notifSupported || Notification.permission!=="granted") return;
+    const now=Date.now();
+    db.tasks.forEach(t=>{
+      if(t.done || fired[t.id]) return;
+      // uniquement à l'instant T : fenêtre de 90 s, pas de rattrapage des heures passées
+      if(t.due<=now && now-t.due<90000) fire(t);
+    });
+    // purge des marqueurs de plus de 3 jours
+    const cut=now-3*864e5, keys=Object.keys(fired);
+    if(keys.length>60) keys.forEach(k=>{ if(fired[k]<cut) delete fired[k]; });
+  }
+
+  // les tâches déjà en retard au lancement ne déclenchent pas d'alerte
+  db.tasks.forEach(t=>{ if(!t.done && t.due<=Date.now()-90000 && !fired[t.id]) fired[t.id]=Date.now(); });
+
+  notifPaint();
+  setInterval(checkDue,20000);
+
+  const now=new Date();
+  $("#tTime").value=pad(now.getHours())+":"+pad(now.getMinutes());
+  renderTab1(); renderTasks();
+  applyTheme();
+  setInterval(()=>{applyTheme();renderNext();renderTasks();},30000);
+})();
+</script></body></html>
