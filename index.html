@@ -223,7 +223,9 @@
     text-transform:uppercase;padding:9px 12px;cursor:pointer;
   }
   #tmBody{flex:1;min-height:0;overflow-y:auto;padding:22px 0 26px;text-align:center;display:flex;flex-direction:column}
-  #tmDateRow{display:flex;justify-content:center;margin-top:10px}
+  #tmDateRow{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:10px}
+  #tmTrash{background:none;border:none;padding:7px 8px;color:var(--graphite);cursor:pointer}
+  #tmTrash:active{color:var(--signal)}
   #tmDate{
     display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--rule);
     border-radius:8px;padding:7px 10px;color:var(--graphite);cursor:pointer;
@@ -702,6 +704,15 @@
         </svg>
         <span class="caret"></span>
       </button>
+      <button id="tmTrash" aria-label="Supprimer cette photo">
+        <svg viewBox="0 0 22 22" width="19" height="19" aria-hidden="true">
+          <path d="M4.5 6h13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M9 6V4.6h4V6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M6.4 6l.8 11.2a1.6 1.6 0 001.6 1.5h4.4a1.6 1.6 0 001.6-1.5L15.6 6"
+                fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M9.6 9.4v6M12.4 9.4v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </button>
     </div>
     <input type="date" id="pDate" class="vh">
     <div id="tmFrame"><img id="tmImg" alt=""></div>
@@ -847,7 +858,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,ivTarget:null,birth:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="5.3";
+  const VERSION="5.4";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -1488,10 +1499,11 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   }
 
   function mergePhotoIndex(idx){
-    if(!idx) { photos.forEach(uploadPhoto); return; }
+    if(!idx) idx={};
     let changed=false;
     const known=new Set(photos.map(p=>p.id));
     Object.keys(idx).forEach(id=>{
+      seen.add(id);
       if(known.has(id)){
         const p=photos.find(x=>x.id===id);
         if(p && typeof idx[id]==="number" && p.ts!==idx[id]){ p.ts=idx[id]; changed=true; }
@@ -1499,8 +1511,13 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
         photos.push({id, ts:idx[id]||Date.now(), src:null}); changed=true;
       }
     });
-    // nos photos que le distant ignore encore
-    photos.forEach(p=>{ if(p.src && !idx[p.id]) uploadPhoto(p); });
+    // supprimée par l'autre téléphone : on retire la copie locale
+    const avant=photos.length;
+    photos=photos.filter(p=>idx[p.id] || !seen.has(p.id));
+    if(photos.length!==avant) changed=true;
+    // les nôtres que le distant ignore encore, jamais supprimées
+    photos.forEach(p=>{ if(p.src && !idx[p.id] && !seen.has(p.id)) uploadPhoto(p); });
+    saveSeen();
     if(changed){
       photos.sort((a,b)=>a.ts-b.ts);
       savePhotos(); renderIdent();
@@ -1868,6 +1885,36 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     rail.addEventListener("pointercancel",end);
     rail.addEventListener("lostpointercapture",end);
   })();
+
+  /* --- supprimer une photo --- */
+  function deletePhoto(i){
+    const p=photos[i]; if(!p) return;
+    seen.add(p.id); saveSeen();                        // ne jamais la renvoyer
+    photos.splice(i,1); savePhotos();
+    if(typeof drop==="function") drop("photoIndex/"+p.id);
+    const u=photoRestUrl(p.id);
+    if(u) fetch(u,{method:"DELETE"}).catch(()=>{});
+    if(!photos.length){ $("#tm").classList.remove("open"); renderIdent(); return; }
+    tmIndex=Math.max(0,Math.min(i,photos.length-1));
+    pos=tmIndex;
+    renderIdent(); renderTM();
+  }
+
+  let trashArmed=null;
+  $("#tmTrash").addEventListener("click",()=>{
+    if(!photos.length) return;
+    const p=photos[tmIndex];
+    const quand=new Date(p.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+    let ok=null;
+    try{ ok=window.confirm("Supprimer la photo du "+quand+" ?\nElle reste dans la galerie du téléphone."); }
+    catch(e){ ok=null; }
+    if(ok===true){ clearTimeout(trashArmed); trashArmed=null; $("#tmNote").textContent=""; deletePhoto(tmIndex); return; }
+    if(ok===false) return;
+    // boîte native indisponible : confirmation en deux temps
+    if(trashArmed){ clearTimeout(trashArmed); trashArmed=null; deletePhoto(tmIndex); return; }
+    $("#tmNote").textContent="Touchez à nouveau la corbeille pour confirmer la suppression.";
+    trashArmed=setTimeout(()=>{ trashArmed=null; renderTM(); },4000);
+  });
 
   /* --- dater une photo --- */
   $("#tmDate").addEventListener("click",()=>{
