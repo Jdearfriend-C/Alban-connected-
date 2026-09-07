@@ -206,6 +206,23 @@
   .blab{font-size:9px;color:var(--graphite);text-align:center;margin-top:5px;letter-spacing:.02em}
   #tline{position:absolute;left:0;right:0;border-top:1px dashed var(--signal);pointer-events:none}
   #tlab{position:absolute;right:0;font-size:9px;color:var(--signal);letter-spacing:.1em;text-transform:uppercase;background:var(--paper);padding:0 3px;transform:translateY(-50%)}
+  /* ---------- vue rythme ---------- */
+  #rAxis{display:flex;justify-content:space-between;font-size:9px;color:var(--graphite);
+    padding:0 0 6px 44px;letter-spacing:.06em}
+  .rrow{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .rlab{width:36px;flex:none;font-size:10px;color:var(--graphite);text-align:right;letter-spacing:.02em}
+  .rtrack{position:relative;flex:1;height:22px;background:var(--card);border-radius:4px;overflow:hidden}
+  .rnight{position:absolute;top:0;bottom:0;background:var(--sunk)}
+  .rgrid{position:absolute;top:0;bottom:0;width:1px;background:var(--rule);opacity:.6}
+  .rdot{
+    position:absolute;top:50%;border-radius:50%;background:var(--biberon);
+    transform:translate(-50%,-50%);cursor:pointer;border:1px solid var(--paper);
+  }
+  .rdot.timed{box-shadow:0 0 0 2px var(--couche)}
+  .rdot.hit{background:var(--ink)}
+  .rcnt{width:26px;flex:none;font-size:10px;color:var(--graphite);text-align:right;font-variant-numeric:tabular-nums}
+  #rEmpty{font-size:13px;color:var(--graphite);padding:16px 0}
+
   #stSum{margin-top:22px;display:flex;gap:10px}
   .scard{flex:1;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:12px}
   .scard .k{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--graphite)}
@@ -381,6 +398,19 @@
     font-family:"Roboto Mono",ui-monospace,monospace;font-size:20px;color:var(--ink);text-align:center;
   }
   .tlab{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);margin:14px 0 8px}
+  #tAnalyze{
+    flex:1;background:none;border:1px solid var(--rule);color:var(--ink);border-radius:8px;font:inherit;
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:12px;cursor:pointer;
+  }
+  #tAnalyze:active{background:var(--ink);color:var(--paper)}
+  #tAnalysis{font-size:13px;color:var(--graphite);line-height:1.5;margin-top:10px}
+  #tAnalysis b{color:var(--ink);font-weight:600}
+  #tApply{
+    display:block;margin-top:10px;background:var(--couche);color:#fff;border:none;border-radius:8px;
+    font:inherit;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:11px 14px;cursor:pointer;
+  }
+  #tUndo{background:none;border:none;color:var(--graphite);font:inherit;font-size:12px;
+    text-decoration:underline;cursor:pointer;padding:6px 0 0}
   #tDose{font-size:13px;color:var(--graphite);line-height:1.5;margin-top:10px}
   #tDose b{color:var(--ink);font-weight:600}
   #tCalc{font-size:13px;color:var(--graphite);line-height:1.5;margin-top:10px}
@@ -534,18 +564,24 @@
   </div>
   <div id="stBody">
     <div id="stSeg">
-      <button data-p="day" aria-pressed="true">Jour</button>
-      <button data-p="week" aria-pressed="false">Semaine</button>
-      <button data-p="month" aria-pressed="false">Mois</button>
+      <button data-r="7" aria-pressed="true">7 j</button>
+      <button data-r="14" aria-pressed="false">14 j</button>
+      <button data-r="30" aria-pressed="false">30 j</button>
+      <button data-r="90" aria-pressed="false">3 mois</button>
     </div>
     <div id="stMetric">
       <button data-m="ml" aria-pressed="true">Volume</button>
       <button data-m="dur" aria-pressed="false">Durée ⏱</button>
+      <button data-m="rhythm" aria-pressed="false">Rythme</button>
     </div>
     <div id="stRead"></div>
     <div id="chartWrap">
       <div id="chart"><div id="bars"></div></div>
       <div id="tline"><span id="tlab"></span></div>
+    </div>
+    <div id="rhythm" hidden>
+      <div id="rAxis"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>24h</span></div>
+      <div id="rRows"></div>
     </div>
     <div id="stSum"></div>
     <div id="stNote"></div>
@@ -625,9 +661,9 @@
       <span class="unit">🍼 total</span>
     </div>
     <div class="sline">
-      <input id="tNight" class="tfield" type="number" inputmode="numeric" min="0" max="12" step="1" placeholder="3">
-      <span class="unit">🌙 nuit</span>
+      <button id="tAnalyze">Analyser les 5 derniers jours</button>
     </div>
+    <div id="tAnalysis"></div>
     <div id="tDose"></div>
     <div id="tDisc">Règle d'Appert : poids en grammes ÷ 10 + 250 ml. Repère indicatif pour l'alimentation au biberon, valable jusqu'à environ 6 kg. À ajuster selon l'appétit du bébé et l'avis de votre pédiatre.</div>
     <div class="sactions">
@@ -655,10 +691,10 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     return{get:()=>localStorage.getItem(KEY),set:v=>localStorage.setItem(KEY,v)};}
     catch(e){let m=null;return{get:()=>m,set:v=>m=v};}})();
 
-  let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,bottlesNight:null};
+  let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,ivTarget:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="3.5";
+  const VERSION="3.7";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -720,12 +756,10 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     const d=new Date(ts), h=d.getHours()+d.getMinutes()/60;
     return h>=NIGHT_START || h<NIGHT_END;
   }
-  const nightBottles=()=>Math.max(0,Math.min(db.bottlesNight||0, db.bottles||0));
-  const dayBottles=()=>Math.max(0,(db.bottles||0)-nightBottles());
-
-  function mealIv(ts){
-    if(isNight(ts)) return nightBottles()>0 ? NIGHT_H/nightBottles() : db.iv;
-    return dayBottles()>0 ? DAY_H/dayBottles() : db.iv;
+  // un seul intervalle : la cible observée si elle existe, sinon 24 h / nombre de biberons
+  function mealIv(){
+    if(db.ivTarget>0) return db.ivTarget;
+    return db.bottles>0 ? 24/db.bottles : db.iv;
   }
   function ivHours(){ return mealIv(Date.now()); }
   function fmtIv(h){
@@ -1194,7 +1228,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(typeof v.iv==="number") db.iv=v.iv;
     if(typeof v.ivAuto==="boolean") db.ivAuto=v.ivAuto;
     if(typeof v.ivCouche==="number") db.ivCouche=v.ivCouche;
-    if(typeof v.bottlesNight==="number"||v.bottlesNight===null) db.bottlesNight=v.bottlesNight;
+    if(typeof v.ivTarget==="number"||v.ivTarget===null) db.ivTarget=v.ivTarget;
     if(typeof v.target==="number"||v.target===null) db.target=v.target;
     if(typeof v.weight==="number"||v.weight===null) db.weight=v.weight;
     if(typeof v.appert==="number") db.appert=v.appert;
@@ -1218,7 +1252,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(typeof v.iv!=="number") push("iv",db.iv);
     if(typeof v.ivAuto!=="boolean") push("ivAuto",db.ivAuto);
     if(typeof v.ivCouche!=="number") push("ivCouche",db.ivCouche);
-    if(v.bottlesNight==null&&db.bottlesNight) push("bottlesNight",db.bottlesNight);
+    if(v.ivTarget==null&&db.ivTarget) push("ivTarget",db.ivTarget);
     if(v.target==null&&db.target) push("target",db.target);
     if(v.weight==null&&db.weight) push("weight",db.weight);
     if(v.bottles==null&&db.bottles) push("bottles",db.bottles);
@@ -1286,7 +1320,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
 
   /* ================= STATISTIQUES ================= */
-  let stPeriod="day", stMetric="ml", stSel=null;
+  let stRange=7, stMetric="ml", stSel=null;
+  const gran=()=> stRange<=31 ? "day" : (stRange<=120 ? "week" : "month");
   const BAR_AREA=140, BASE=22;   // hauteur utile des barres, distance du socle
 
   function dailyTotals(){
@@ -1310,8 +1345,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     const keys=Object.keys(daily).map(Number).sort((a,b)=>a-b);
     if(!keys.length) return [];
     const today=sod(new Date()), out=[];
-    if(stPeriod==="day"){
-      const from=Math.max(keys[0], today-29*864e5);
+    if(gran()==="day"){
+      const from=Math.max(keys[0], today-(stRange-1)*864e5);
       for(let t=from;t<=today;t+=864e5){
         const d=new Date(t);
         const vDay = dur ? (D.dn[t]? Math.round(D.dsum[t]/D.dn[t]/60) : 0) : (daily[t]||0);
@@ -1319,10 +1354,10 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
           lab:d.getDate()+"/"+pad(d.getMonth()+1),
           full:d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})});
       }
-    }else if(stPeriod==="week"){
+    }else if(gran()==="week"){
       const dow=(new Date(today).getDay()+6)%7, thisWeek=today-dow*864e5;
       const first=sod(new Date(keys[0])), firstDow=(new Date(first).getDay()+6)%7;
-      let w=Math.max(first-firstDow*864e5, thisWeek-11*7*864e5);
+      let w=Math.max(first-firstDow*864e5, thisWeek-Math.ceil(stRange/7-1)*7*864e5);
       for(; w<=thisWeek; w+=7*864e5){
         let sum=0, n=0, nb=0;
         for(let i=0;i<7;i++){
@@ -1341,7 +1376,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     }else{
       const start=new Date(keys[0]); start.setDate(1);
       const cur=new Date(); cur.setDate(1);
-      let m=new Date(Math.max(start.getTime(), new Date(cur.getFullYear(),cur.getMonth()-11,1).getTime()));
+      let m=new Date(Math.max(start.getTime(), new Date(cur.getFullYear(),cur.getMonth()-Math.ceil(stRange/30-1),1).getTime()));
       while(m<=cur){
         const y=m.getFullYear(), mo=m.getMonth();
         let sum=0, n=0, nb=0;
@@ -1369,8 +1404,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       return;
     }
     const t=db.target||0, d=t?b.val-t:null;
-    const unit=stPeriod==="day"?"":" en moyenne par jour";
-    const bt = stPeriod==="day" ? b.bot+" 🍼" : b.bot+" 🍼 sur la période";
+    const unit=gran()==="day"?"":" en moyenne par jour";
+    const bt = gran()==="day" ? b.bot+" 🍼" : b.bot+" 🍼 sur la période";
     $("#stRead").innerHTML=
       '<div class="big mono">'+b.val+' ml <span style="font-size:15px;color:var(--graphite)">· '+bt+'</span></div>'+
       '<div class="sub">'+b.full+unit+
@@ -1378,10 +1413,85 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       '</div>';
   }
 
+
+  /* ---------- vue rythme : dispersion horaire ---------- */
+  function rhythmDays(){
+    const today=sod(new Date()), out=[];
+    const n=Math.min(stRange,60);
+    for(let i=0;i<n;i++){
+      const d0=today-i*864e5;
+      const items=db.entries.filter(e=>e.kinds.includes("manger") && e.ts>=d0 && e.ts<d0+864e5)
+                            .sort((a,b)=>a.ts-b.ts);
+      out.push({d0,items});
+    }
+    return out;
+  }
+
+  function renderRhythm(){
+    const days=rhythmDays();
+    const any=days.some(d=>d.items.length);
+    const rows=$("#rRows");
+    if(!any){
+      rows.innerHTML='<div id="rEmpty">Aucun repas enregistré sur la période.</div>';
+      $("#stRead").innerHTML='<div class="sub">Aucune donnée à afficher.</div>';
+      $("#stSum").innerHTML=""; $("#stNote").textContent="";
+      return;
+    }
+    const pc=ts=>{const d=new Date(ts);return ((d.getHours()+d.getMinutes()/60)/24*100);};
+    rows.innerHTML=days.map(d=>{
+      const lab=new Date(d.d0).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric"}).replace(".","");
+      const dots=d.items.map(e=>{
+        const ml=(e.meal&&e.meal.ml)||0;
+        const size=Math.max(7,Math.min(13,7+ml/22));
+        return '<span class="rdot'+((e.meal&&e.meal.dur)?" timed":"")+(stSel===e.id?" hit":"")+'"'+
+          ' data-r="'+e.id+'" style="left:'+pc(e.ts).toFixed(2)+'%;width:'+size+'px;height:'+size+'px"></span>';
+      }).join("");
+      return '<div class="rrow"><span class="rlab">'+lab+'</span>'+
+        '<div class="rtrack">'+
+        '<div class="rnight" style="left:0;width:'+(NIGHT_END/24*100).toFixed(2)+'%"></div>'+
+        '<div class="rnight" style="left:'+(NIGHT_START/24*100).toFixed(2)+'%;right:0"></div>'+
+        [6,12,18].map(h=>'<div class="rgrid" style="left:'+(h/24*100).toFixed(2)+'%"></div>').join("")+
+        dots+'</div><span class="rcnt">'+(d.items.length||"")+'</span></div>';
+    }).join("");
+
+    rows.querySelectorAll(".rdot").forEach(el=>el.addEventListener("click",()=>{
+      stSel=el.dataset.r;
+      const e=db.entries.find(x=>x.id===stSel);
+      rows.querySelectorAll(".rdot").forEach(x=>x.classList.toggle("hit",x.dataset.r===stSel));
+      if(e) $("#stRead").innerHTML=
+        '<div class="big mono">'+hm(e.ts)+' <span style="font-size:15px;color:var(--graphite)">· '+
+        ((e.meal&&e.meal.ml)||0)+' ml'+((e.meal&&e.meal.dur)?" · "+Math.max(1,Math.round(e.meal.dur/60))+" min":"")+'</span></div>'+
+        '<div class="sub">'+new Date(e.ts).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})+'</div>';
+    }));
+
+    // statistiques de rythme
+    let gaps=[], firsts=[], lasts=[], counts=[];
+    days.forEach(d=>{
+      if(!d.items.length) return;
+      counts.push(d.items.length);
+      const h=t=>{const x=new Date(t);return x.getHours()+x.getMinutes()/60;};
+      firsts.push(h(d.items[0].ts)); lasts.push(h(d.items[d.items.length-1].ts));
+      for(let i=1;i<d.items.length;i++) gaps.push((d.items[i].ts-d.items[i-1].ts)/36e5);
+    });
+    const moy=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+    const asHour=v=>pad(Math.floor(v))+"h"+pad(Math.round((v%1)*60));
+    $("#stSum").innerHTML=
+      '<div class="scard"><div class="k">Prises / jour</div><div class="v mono">'+moy(counts).toFixed(1)+'</div></div>'+
+      '<div class="scard"><div class="k">Écart moyen</div><div class="v mono">'+(gaps.length?fmtIv(moy(gaps)):"—")+'</div></div>'+
+      '<div class="scard"><div class="k">1re prise</div><div class="v mono">'+(firsts.length?asHour(moy(firsts)):"—")+'</div></div>';
+    $("#stNote").textContent="Un point par biberon, positionné à son heure de prise. Taille du point : quantité. Contour turquoise : prise chronométrée. Zones sombres : la nuit (21h30–7h).";
+    if(!stSel || !db.entries.some(x=>x.id===stSel))
+      $("#stRead").innerHTML='<div class="sub">Touchez un point pour le détail.</div>';
+  }
+
   function renderStats(){
-    const list=buckets(), target=(stMetric==="ml")?(db.target||0):0;
-    $$("#stSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.p===stPeriod));
+    $$("#stSeg button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.r===stRange));
     $$("#stMetric button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===stMetric));
+    const rhythmView = stMetric==="rhythm";
+    $("#rhythm").hidden=!rhythmView;
+    $("#chartWrap").style.display=rhythmView?"none":"";
+    if(rhythmView){ renderRhythm(); return; }
+    const list=buckets(), target=(stMetric==="ml")?(db.target||0):0;
     if(!list.length){
       $("#bars").innerHTML=""; $("#stSum").innerHTML="";
       $("#stRead").innerHTML='<div class="sub">'+(stMetric==="dur"
@@ -1424,9 +1534,9 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
     $("#stNote").textContent = stMetric==="dur"
       ? "Durée moyenne d'un biberon chronométré. Seules les prises enregistrées avec le minuteur apparaissent ici."
-      : (stPeriod==="day"
-        ? "Total bu par jour sur les 30 derniers jours. La ligne rouge est la ration cible actuelle ("+(target||"non réglée")+(target?" ml":"")+")."
-        : "Moyenne quotidienne par "+(stPeriod==="week"?"semaine":"mois")+", comparable à la cible journalière. Les jours sans entrée comptent pour zéro.");
+      : (gran()==="day"
+        ? "Total bu par jour. La ligne rouge est la ration cible actuelle ("+(target||"non réglée")+(target?" ml":"")+")."
+        : "Moyenne quotidienne par "+(gran()==="week"?"semaine":"mois")+", comparable à la cible journalière. Les jours sans entrée comptent pour zéro.");
 
     $$("#bars .bwrap").forEach(w=>w.addEventListener("click",()=>{
       stSel=+w.dataset.b;
@@ -1443,7 +1553,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   $("#statsOpen").addEventListener("click",()=>{ stSel=null; $("#stats").classList.add("open"); renderStats(); });
   $("#stBack").addEventListener("click",()=>$("#stats").classList.remove("open"));
   $$("#stSeg button").forEach(b=>b.addEventListener("click",()=>{
-    stPeriod=b.dataset.p; stSel=null; renderStats();
+    stRange=+b.dataset.r; stSel=null; renderStats();
   }));
   $$("#stMetric button").forEach(b=>b.addEventListener("click",()=>{
     stMetric=b.dataset.m; stSel=null; renderStats();
@@ -1472,10 +1582,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   // biberons théoriquement dus depuis minuit
   function expectedByNow(){
     const now=new Date(), h=now.getHours()+now.getMinutes()/60;
-    const nuitTot=nightBottles(), jourTot=dayBottles();
-    const nightEl=Math.min(h,NIGHT_END)+Math.max(0,h-NIGHT_START);
-    const dayEl=Math.max(0,Math.min(h,NIGHT_START)-NIGHT_END);
-    return (nuitTot*nightEl/NIGHT_H)+(jourTot*dayEl/DAY_H);
+    return (db.bottles||0)*h/24;
   }
 
   // moyenne des biberons par jour sur les 7 journées complètes précédentes
@@ -1644,13 +1751,11 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
   function paintDose(){
     const t=parseInt($("#tTarget").value,10), n=parseInt($("#tBottles").value,10);
-    let nb=parseInt($("#tNight").value,10); if(isNaN(nb)) nb=0;
     if(isNaN(t)||isNaN(n)||n<=0){ $("#tDose").textContent="Saisissez un objectif et un nombre de biberons pour obtenir la dose."; return; }
-    if(nb>n){ $("#tDose").textContent="Le nombre de biberons de nuit ne peut pas dépasser le total."; return; }
-    const d=Math.round(t/n/5)*5, jour=n-nb;
-    $("#tDose").innerHTML=t+" ml ÷ "+n+" = <b>"+d+" ml</b> par biberon, jour comme nuit<br>"+
-      "Jour : <b>"+jour+"</b> biberons"+(jour?" toutes les <b>"+fmtIv(DAY_H/jour)+"</b>":"")+
-      " · Nuit : <b>"+nb+"</b>"+(nb?" toutes les <b>"+fmtIv(NIGHT_H/nb)+"</b>":"")+
+    const d=Math.round(t/n/5)*5;
+    $("#tDose").innerHTML=t+" ml ÷ "+n+" = <b>"+d+" ml</b> par biberon<br>"+
+      "Intervalle : 24 h ÷ "+n+" = <b>"+fmtIv(24/n)+"</b>"+
+      (db.ivTarget>0 ? " · cible observée en vigueur : <b>"+fmtIv(db.ivTarget)+"</b>" : "")+
       (d>240? "<br>Dose élevée, mieux vaut répartir sur davantage de biberons." : "");
   }
 
@@ -1665,12 +1770,65 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     paintDose();
   }
 
+
+  /* ---------- analyse du rythme réel ---------- */
+  let pendingIv=null;
+
+  function analyzeRhythm(days){
+    const today=sod(new Date()), gaps=[], perDay=[];
+    for(let i=0;i<days;i++){
+      const d0=today-i*864e5;
+      const list=db.entries.filter(e=>e.kinds.includes("manger")&&e.ts>=d0&&e.ts<d0+864e5)
+                           .sort((a,b)=>a.ts-b.ts);
+      if(!list.length) continue;
+      perDay.push(list.length);
+      for(let k=1;k<list.length;k++){
+        const g=(list[k].ts-list[k-1].ts)/36e5;
+        if(g>=0.5&&g<=8) gaps.push(g);   // on ignore les doublons et les trous aberrants
+      }
+    }
+    if(gaps.length<4) return null;
+    gaps.sort((a,b)=>a-b);
+    const med=gaps.length%2 ? gaps[(gaps.length-1)/2]
+                            : (gaps[gaps.length/2-1]+gaps[gaps.length/2])/2;
+    const iv=Math.round(med*12)/12;      // arrondi aux 5 minutes
+    return {iv, n:gaps.length, jours:perDay.length,
+            parJour:perDay.reduce((a,c)=>a+c,0)/perDay.length};
+  }
+
+  function paintAnalysis(res){
+    const box=$("#tAnalysis");
+    if(res===undefined){
+      box.innerHTML = db.ivTarget>0
+        ? "Intervalle cible actuel : <b>"+fmtIv(db.ivTarget)+"</b>, issu de l'observation. <button id='tUndo'>Revenir au calcul automatique</button>"
+        : "";
+    }else if(!res){
+      box.innerHTML="Pas assez de repas enregistrés sur les 5 derniers jours pour dégager un rythme.";
+    }else{
+      pendingIv=res.iv;
+      box.innerHTML="Sur "+res.jours+" jour"+(res.jours>1?"s":"")+", "+res.parJour.toFixed(1)+
+        " biberons par jour et un écart médian de <b>"+fmtIv(res.iv)+"</b> ("+res.n+" intervalles). "+
+        "Le calcul théorique donne "+(db.bottles?fmtIv(24/db.bottles):"—")+"."+
+        "<button id='tApply'>Adopter "+fmtIv(res.iv)+" comme intervalle</button>";
+    }
+    const ap=$("#tApply"); if(ap) ap.addEventListener("click",()=>{
+      db.ivTarget=pendingIv; saveLocal(); push("ivTarget",db.ivTarget);
+      paintAnalysis(); paintDose(); renderTab1();
+    });
+    const un=$("#tUndo"); if(un) un.addEventListener("click",()=>{
+      db.ivTarget=null; saveLocal(); push("ivTarget",null);
+      paintAnalysis(); paintDose(); renderTab1();
+    });
+  }
+
+  $("#tAnalyze").addEventListener("click",()=>paintAnalysis(analyzeRhythm(5)));
+
   function openTarget(){
     $("#tWeight").value = db.weight||"";
     $("#tTarget").value = db.target||"";
     $$("#tConst button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.k===db.appert));
     $("#tBottles").value = db.bottles||"";
-    $("#tNight").value = db.bottlesNight||"";
+    pendingIv=null; paintAnalysis();
     if(db.weight) paintCalc(); else $("#tCalc").textContent="Saisissez le poids pour appliquer la règle d'Appert.";
     $("#tTarget").value = db.target||"";
     paintDose();
@@ -1680,7 +1838,6 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   $("#gauge").addEventListener("click",openTarget);
   $("#tWeight").addEventListener("input",paintCalc);
   $("#tBottles").addEventListener("input",paintDose);
-  $("#tNight").addEventListener("input",paintDose);
   $("#tTarget").addEventListener("input",paintDose);
   $$("#tConst button").forEach(b=>b.addEventListener("click",()=>{
     db.appert=+b.dataset.k; paintCalc();
@@ -1689,13 +1846,12 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   $("#tsheet").addEventListener("click",ev=>{ if(ev.target===$("#tsheet")) $("#tsheet").classList.remove("open"); });
   $("#tSave").addEventListener("click",()=>{
     const w=parseInt($("#tWeight").value,10), t=parseInt($("#tTarget").value,10),
-          n=parseInt($("#tBottles").value,10), nb=parseInt($("#tNight").value,10);
+          n=parseInt($("#tBottles").value,10);
     db.weight=isNaN(w)?null:w;
     db.target=isNaN(t)?null:t;
     db.bottles=(isNaN(n)||n<=0)?null:n;
-    db.bottlesNight=(isNaN(nb)||nb<0)?null:Math.min(nb,db.bottles||nb);
     saveLocal(); push("weight",db.weight); push("target",db.target);
-    push("appert",db.appert); push("bottles",db.bottles); push("bottlesNight",db.bottlesNight);
+    push("appert",db.appert); push("bottles",db.bottles);
     $("#tsheet").classList.remove("open");
     renderTab1();
   });
