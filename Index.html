@@ -1,0 +1,2791 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E4E7EA">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Suivi</title>
+<link rel="manifest" href='data:application/manifest+json,{"name":"Suivi","short_name":"Suivi","display":"standalone","background_color":"%23E4E7EA","theme_color":"%23E4E7EA","start_url":"."}'>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23182028'/><circle cx='36' cy='50' r='16' fill='%232E8B94'/><circle cx='66' cy='50' r='16' fill='%23E08A2B'/></svg>">
+<style>
+  :root{
+    --paper:#E4E7EA; --card:#EDEFF1; --ink:#182028; --graphite:#5C6670;
+    --rule:#C7CDD2; --sunk:#D3D9DD; --couche:#2E8B94; --biberon:#E08A2B; --signal:#FF5B3D; --night:#2B3A67;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overscroll-behavior:none}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:"Roboto Condensed","Roboto",system-ui,sans-serif;
+    display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    -webkit-user-select:none;user-select:none;
+  }
+  .mono{font-family:"Roboto Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .caps{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite)}
+
+  header{padding:16px 20px 0}
+  .hrow{display:flex;align-items:center;gap:10px}
+  #sync{
+    margin-left:auto;display:flex;align-items:center;gap:6px;background:none;border:none;
+    font:inherit;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--graphite);cursor:pointer;padding:2px 0;
+  }
+  #syncDot{width:7px;height:7px;border-radius:50%;background:var(--rule);flex:none}
+  #sync.ok #syncDot{background:var(--couche)}
+  #sync.wait #syncDot{background:var(--biberon)}
+  #sync.err #syncDot{background:var(--signal)}
+  #dateline{
+    font-size:12px;font-weight:400;letter-spacing:.01em;color:var(--graphite);
+    text-transform:none;opacity:.85;
+  }
+  #dateline::first-letter{text-transform:uppercase}
+  #ident{display:flex;align-items:center;gap:28px;margin-top:14px}
+  .vh{position:absolute;left:-9999px;width:1px;height:1px;opacity:0;border:0;padding:0}
+  /* l'input recouvre la zone : le clic natif ouvre appareil photo / galerie */
+  .filepick{
+    position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;
+    z-index:4;font-size:0;padding:0;border:0;
+  }
+  .filepick[hidden]{display:none}
+  #nudge,#tmAdd{position:relative}
+  #stack{position:relative;width:68px;height:80px;flex:none}
+  #stack .filepick{height:68px}
+  .ps{position:absolute;border-radius:8px;background:var(--card);border:1px solid var(--rule);overflow:hidden}
+  .psimg{width:100%;height:100%;object-fit:cover;display:block}
+  .veil{position:absolute;inset:0;background:#0E1319;opacity:0}
+  .ps2.filled .veil{opacity:.4}
+  .ps3.filled .veil{opacity:.62}
+  .ps2.filled,.ps3.filled{border-style:solid;opacity:1}
+  .ps3{left:9px;right:9px;top:14px;height:64px;opacity:.45}
+  .ps2{left:5px;right:5px;top:10px;height:64px;opacity:.7}
+  .ps1{
+    left:0;top:0;width:68px;height:68px;overflow:hidden;cursor:pointer;
+    border-style:dashed;display:flex;align-items:center;justify-content:center;
+  }
+  .ps1.filled{border-style:solid}
+  .ps1:not(.filled)::before,.ps1:not(.filled)::after{
+    content:"";position:absolute;background:var(--rule);border-radius:1px;
+  }
+  .ps1:not(.filled)::before{width:16px;height:1.5px}
+  .ps1:not(.filled)::after{width:1.5px;height:16px}
+  #photoDue{
+    z-index:5;position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;
+    background:var(--signal);border:2px solid var(--paper);
+  }
+  #idImg{width:100%;height:100%;object-fit:cover;display:block}
+  #ident{align-items:flex-start}
+  #idAge{
+    flex:1;min-width:0;background:none;border:none;padding:6px 0 0;text-align:left;cursor:pointer;
+    font:inherit;color:var(--ink);display:block;
+  }
+  #idAge .l1{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--graphite)}
+  #idAge .l2{display:block;font-size:26px;font-weight:500;letter-spacing:-.02em;line-height:1.15;margin-top:1px}
+  #idAge .l3{display:block;font-size:12px;color:var(--graphite);margin-top:1px}
+  #idAge.empty .l2{font-size:15px;font-weight:400;color:var(--graphite);text-decoration:underline}
+
+
+  #nudge{
+    display:block;margin-top:12px;background:var(--card);border:1px solid var(--signal);
+    border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--ink);cursor:pointer;
+  }
+  #nudge[hidden]{display:none}
+  nav{display:flex;gap:24px;margin-top:16px;border-bottom:1px solid var(--rule)}
+  nav button{
+    background:none;border:none;font:inherit;font-size:14px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--graphite);padding:0 0 10px;cursor:pointer;
+    border-bottom:2px solid transparent;margin-bottom:-1px;
+  }
+  nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--signal)}
+  nav button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+
+  main{flex:1;min-height:0;display:flex;flex-direction:column}
+  .tab{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px 24px}
+  .tab[hidden]{display:none}
+
+  /* ---------- jauge de lait ---------- */
+  #tip{position:relative;margin:0 0 14px}
+  #tipArrow{
+    position:absolute;top:-7px;right:22%;width:12px;height:12px;background:var(--card);
+    border-left:1px solid var(--rule);border-top:1px solid var(--rule);transform:rotate(45deg);
+  }
+  #tipBar{
+    width:100%;display:flex;align-items:center;gap:9px;background:var(--card);
+    border:1px solid var(--rule);border-radius:8px;padding:11px 12px;font:inherit;
+    color:var(--ink);text-align:left;cursor:pointer;position:relative;
+  }
+  #tip.open #tipBar{border-radius:8px 8px 0 0;border-bottom:none}
+  #tipIcon{font-size:15px;flex:none}
+  #tipHead{flex:1;font-size:13px;font-weight:600;letter-spacing:-.01em;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #tipChev{
+    width:7px;height:7px;flex:none;border-right:1.5px solid var(--graphite);
+    border-bottom:1.5px solid var(--graphite);transform:rotate(45deg) translate(-2px,-2px);
+    transition:transform .18s ease;
+  }
+  #tip.open #tipChev{transform:rotate(-135deg) translate(-2px,-2px)}
+  #tipBody{
+    display:none;background:var(--card);border:1px solid var(--rule);border-top:none;
+    border-radius:0 0 8px 8px;padding:0 12px 12px;
+  }
+  #tip.open #tipBody{display:block}
+  #tipText{font-size:14px;line-height:1.5}
+  #tipText b{font-weight:600}
+  #tipWhy{font-size:12px;line-height:1.5;color:var(--graphite);margin-top:8px}
+
+  #gauge{
+    display:block;width:100%;text-align:left;margin:0 0 4px;cursor:pointer;
+    background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px;font:inherit;
+  }
+  #gauge:active{border-color:var(--ink)}
+  #gTop{display:flex;align-items:baseline;gap:8px}
+  #gLabel{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite)}
+  #gSet{margin-left:auto;font-size:11px;color:var(--graphite);letter-spacing:.06em}
+  #gNums{display:flex;align-items:baseline;gap:6px;margin-top:6px}
+  #gDone{font-size:32px;font-weight:500;letter-spacing:-.02em;color:var(--ink)}
+  #gTarget{font-size:15px;color:var(--graphite)}
+  #gBar{height:8px;background:var(--sunk);border-radius:8px;margin-top:10px;overflow:hidden}
+  #gFill{height:100%;width:0;background:var(--biberon);border-radius:8px;transition:width .35s ease}
+  #gauge.night #gFill{background:var(--night)}
+  #gauge.over #gFill{background:var(--signal)}
+  #gPhase{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--graphite)}
+  #gauge.night #gPhase{color:var(--night);font-weight:600}
+  #gCount{margin-left:auto;font-size:15px;font-weight:500;color:var(--ink);letter-spacing:.02em;white-space:nowrap}
+  #gCount span{color:var(--graphite);font-weight:400}
+  #gNote{font-size:12px;color:var(--graphite);margin-top:8px}
+  #gDose{font-size:12px;color:var(--graphite);margin-top:10px}
+  #gDose b{color:var(--ink);font-weight:600}
+
+  #next{display:flex;gap:20px;margin:18px 0 20px}
+  .npill{flex:1;min-width:0}
+  .npill .lbl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--graphite);display:block}
+  .npill.couche .lbl{color:var(--couche)}
+  .npill.manger .lbl{color:var(--biberon)}
+  .npill .t{font-size:26px;font-weight:500;letter-spacing:-.02em;margin-top:2px;display:block;color:var(--ink)}
+  .npill .d{font-size:11px;color:var(--graphite);letter-spacing:.04em}
+  .npill.due .t{color:var(--signal)}
+  .npill.due .d{color:var(--signal)}
+
+  /* card englobante : les 2 options + l'action cumulée */
+  .logcard{
+    background:var(--card);border:1px solid var(--rule);border-radius:8px;
+    padding:10px;display:flex;flex-direction:column;gap:10px;
+  }
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .log-btn{border:none;border-radius:8px;padding:24px 12px 18px;cursor:pointer;font:inherit;color:#fff;text-align:left}
+  .log-btn:active{transform:scale(.985)}
+  .log-btn .n{font-size:22px;font-weight:600;letter-spacing:.02em}
+  .log-btn .s{font-size:11px;letter-spacing:.16em;text-transform:uppercase;opacity:.85;display:block;margin-top:4px}
+  .log-btn .iv{margin-top:2px;opacity:.7;text-transform:none;letter-spacing:.02em;font-size:11.5px}
+  .b-couche{background:var(--couche)}
+  .b-biberon,.b-manger{background:var(--biberon)}
+  .b-both{
+    background:none;border:1px dashed var(--rule);color:var(--graphite);
+    padding:13px 10px;text-align:center;position:relative;
+  }
+  .b-both .n{font-size:14px;font-weight:500;letter-spacing:.06em;color:var(--ink)}
+  .b-both .s{opacity:1;margin-top:2px}
+  .b-both:active{background:var(--ink);border-style:solid;border-color:var(--ink)}
+  .b-both:active .n,.b-both:active .s{color:var(--paper)}
+  .b-both .n::before,.b-both .n::after{
+    content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
+    vertical-align:middle;margin:0 8px 2px 0;
+  }
+  .b-both .n::before{background:var(--couche)}
+  .b-both .n::after{background:var(--biberon);margin:0 0 2px 8px}
+
+  .interval{display:flex;align-items:center;gap:8px;margin:16px 0 4px}
+  .interval .caps{flex:1}
+  .interval button{background:none;border:1px solid var(--rule);color:var(--ink);font:inherit;font-size:12px;padding:5px 10px;cursor:pointer;border-radius:8px}
+  .interval button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+  .sechead{display:flex;align-items:baseline;gap:10px;margin:24px 0 4px}
+  .sechead h2.sec{margin:0;flex:1}
+  #statsOpen{
+    background:none;border:1px solid var(--rule);border-radius:8px;font:inherit;font-size:12px;
+    color:var(--ink);padding:7px 11px;cursor:pointer;letter-spacing:.02em;
+  }
+  #statsOpen:active{background:var(--ink);color:var(--paper)}
+
+  /* ---------- time machine ---------- */
+  #tm{
+    position:fixed;inset:0;background:var(--paper);z-index:32;display:none;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #tm.open{display:flex}
+  #tmHead{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--rule)}
+  #tmBack{background:none;border:none;font:inherit;font-size:22px;line-height:1;color:var(--ink);cursor:pointer;padding:2px 6px 4px 0}
+  #tmTitle{flex:1;font-size:16px;font-weight:600;letter-spacing:-.01em}
+  #tmAdd{
+    background:var(--ink);color:var(--paper);border-radius:8px;font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;padding:9px 12px;cursor:pointer;
+  }
+  #tmBody{flex:1;min-height:0;overflow-y:auto;padding:22px 0 26px;text-align:center;display:flex;flex-direction:column}
+  #tmDateRow{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:10px}
+  #tmTrash{background:none;border:none;padding:7px 8px;color:var(--graphite);cursor:pointer}
+  #tmTrash:active{color:var(--signal)}
+  #tmDate{
+    display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--rule);
+    border-radius:8px;padding:7px 10px;color:var(--graphite);cursor:pointer;
+  }
+  #tmDate:active{color:var(--ink)}
+  #tmDate .caret{
+    width:5px;height:5px;border-right:1.4px solid currentColor;border-bottom:1.4px solid currentColor;
+    transform:rotate(45deg) translate(-1px,-1px);
+  }
+  #tmAge{font-size:34px;font-weight:500;letter-spacing:-.03em;line-height:1.05;padding:0 20px}
+  #tmSub{font-size:13px;color:var(--graphite);margin-top:6px;padding:0 20px}
+  #tmFrame{margin:22px 32px 0;border-radius:8px;overflow:hidden;background:var(--card);aspect-ratio:1/1}
+  #tmImg{width:100%;height:100%;object-fit:cover;display:block;transition:opacity .2s ease}
+  #tmFrame.loading{position:relative}
+  #tmFrame.loading::after{
+    content:"Téléchargement…";position:absolute;inset:0;display:flex;align-items:center;
+    justify-content:center;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--graphite);
+  }
+  #tmRailWrap{position:relative;margin-top:auto;padding-top:26px}
+  #tmRail{
+    position:relative;overflow:hidden;height:52px;
+    touch-action:pan-y;cursor:grab;-webkit-user-select:none;user-select:none;
+  }
+  #tmRail.grabbing{cursor:grabbing}
+  #tmTrack{position:absolute;left:50%;top:0;height:100%;display:flex;will-change:transform}
+  .tick{
+    width:46px;flex:none;display:flex;align-items:center;justify-content:center;gap:9px;
+  }
+  .tick i{display:block;width:1px;height:11px;background:var(--rule)}
+  .tick b{display:block;width:2px;height:26px;background:var(--graphite);border-radius:2px}
+  .tick.on b{background:var(--signal);height:34px}
+  .tick b,.tick.on b{transition:height .16s ease,background .16s ease}
+  #tmNote{font-size:12px;color:var(--graphite);margin-top:16px;padding:0 24px;line-height:1.5}
+
+  /* ---------- page statistiques ---------- */
+  #stats{
+    position:fixed;inset:0;background:var(--paper);z-index:30;display:none;
+    flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #stats.open{display:flex}
+  #stHead{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--rule)}
+  #stBack{
+    background:none;border:none;font:inherit;font-size:22px;line-height:1;color:var(--ink);
+    cursor:pointer;padding:2px 6px 4px 0;
+  }
+  #stTitle{font-size:16px;font-weight:600;letter-spacing:-.01em}
+  #stBody{flex:1;min-height:0;overflow-y:auto;padding:16px 20px 30px}
+  #stSeg{display:flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+  #stSeg button{flex:1;background:var(--card);border:none;border-right:1px solid var(--rule);
+    font:inherit;font-size:13px;padding:11px 6px;color:var(--graphite);cursor:pointer}
+  #stSeg button:last-child{border-right:none}
+  #stSeg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  #stMetric{display:flex;gap:8px;margin-top:10px}
+  #stMetric button{
+    flex:1;background:none;border:1px solid var(--rule);border-radius:8px;font:inherit;font-size:12px;
+    color:var(--graphite);padding:9px 6px;cursor:pointer;
+  }
+  #stMetric button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  #stRead{margin:18px 0 4px;min-height:46px}
+  #stRead .big{font-size:28px;font-weight:500;letter-spacing:-.02em}
+  #stRead .sub{font-size:12px;color:var(--graphite);margin-top:3px}
+  #stRead .delta.up{color:var(--couche)}
+  #stRead .delta.down{color:var(--signal)}
+  #chartWrap{position:relative;margin-top:10px}
+  #chart{
+    overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0 0 6px;
+    scrollbar-width:none;
+  }
+  #chart::-webkit-scrollbar{display:none}
+  #bars{display:flex;align-items:flex-end;gap:7px;height:190px;position:relative;padding-top:6px}
+  .bwrap{display:flex;flex-direction:column;justify-content:flex-end;height:100%;flex:none;width:34px;cursor:pointer}
+  .bval{font-size:9px;color:var(--graphite);text-align:center;margin-bottom:1px;font-variant-numeric:tabular-nums}
+  .bbot{font-size:8px;color:var(--graphite);text-align:center;margin-bottom:3px;opacity:.8}
+  .bar{width:100%;background:var(--biberon);border-radius:4px 4px 0 0;min-height:2px;transition:opacity .2s}
+  .bwrap.hit .bar{outline:2px solid var(--ink);outline-offset:1px}
+  .bar.over{background:var(--couche)}
+  .bar.none{background:var(--rule)}
+  .blab{font-size:9px;color:var(--graphite);text-align:center;margin-top:5px;letter-spacing:.02em}
+  #tline{position:absolute;left:0;right:0;border-top:1px dashed var(--signal);pointer-events:none}
+  #tlab{position:absolute;right:0;font-size:9px;color:var(--signal);letter-spacing:.1em;text-transform:uppercase;background:var(--paper);padding:0 3px;transform:translateY(-50%)}
+  /* ---------- vue rythme ---------- */
+  #rAxis{display:flex;justify-content:space-between;font-size:9px;color:var(--graphite);
+    padding:0 4.7% 6px 10%;letter-spacing:.06em}
+  #rEmpty{font-size:13px;color:var(--graphite);padding:16px 0}
+
+  #stSum{margin-top:22px;display:flex;gap:10px}
+  .scard{flex:1;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:12px}
+  .scard .k{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--graphite)}
+  .scard .v{font-size:20px;font-weight:500;margin-top:4px}
+  #stNote{font-size:12px;color:var(--graphite);line-height:1.5;margin-top:18px}
+
+  h2.sec{margin:24px 0 4px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite)}
+  .hint{font-size:12px;color:var(--graphite);padding:6px 0 2px}
+
+  .row{display:flex;align-items:baseline;gap:10px;padding:11px 0;border-bottom:1px solid var(--rule);cursor:pointer}
+  .row:active{background:var(--card)}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none;align-self:center}
+  .dot.couche{background:var(--couche)}
+  .dot.manger{background:var(--biberon)}
+  .dot.biberon{background:var(--biberon)}
+  .hm{font-size:19px;font-weight:500;min-width:62px}
+  .sec2{font-size:11px;color:var(--graphite);margin-left:-6px}
+  .kind{font-size:13px;letter-spacing:.04em;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .kind i{font-style:normal;color:var(--graphite)}
+  .day{font-size:12px;color:var(--graphite);flex:none}
+  .edit{font-size:11px;color:var(--rule);letter-spacing:.1em;padding-left:8px}
+  .acc{
+    width:100%;display:flex;align-items:center;gap:10px;background:none;border:none;
+    border-bottom:1px solid var(--rule);font:inherit;color:var(--ink);
+    padding:14px 0;cursor:pointer;text-align:left;
+  }
+  .acc .albl{font-size:13px;letter-spacing:.04em}
+  .acc .acnt{margin-left:auto;font-size:12px;color:var(--graphite)}
+  .gbot{color:var(--graphite);margin-right:6px}
+  .acc .chev{
+    width:8px;height:8px;border-right:1.5px solid var(--graphite);border-bottom:1.5px solid var(--graphite);
+    transform:rotate(45deg) translate(-2px,-2px);transition:transform .18s ease;flex:none;
+  }
+  .acc[aria-expanded="true"] .chev{transform:rotate(-135deg) translate(-2px,-2px)}
+  .acc[aria-expanded="true"] .albl{font-weight:600}
+  .accbody{padding-left:2px}
+  .accbody[hidden]{display:none}
+  .grouplab{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);padding:12px 0 2px}
+  .empty{padding:22px 0;color:var(--graphite);font-size:14px}
+  .del{background:none;border:none;color:var(--rule);font:inherit;font-size:16px;padding:0 0 0 10px;cursor:pointer}
+  .del:active{color:var(--signal)}
+
+  .form{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 6px}
+  .form input[type=text]{flex:1 1 100%;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:12px;font:inherit;font-size:15px;color:var(--ink)}
+  .form input[type=time]{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:11px;font:inherit;font-size:15px;color:var(--ink)}
+  .form .seg{display:flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+  .form .seg button{background:var(--card);border:none;border-right:1px solid var(--rule);font:inherit;font-size:12px;padding:0 12px;color:var(--graphite);cursor:pointer}
+  .form .seg button:last-child{border-right:none}
+  .form .seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  .form .add{flex:1;background:var(--signal);color:#fff;border:none;border-radius:8px;font:inherit;font-size:13px;letter-spacing:.16em;text-transform:uppercase;padding:12px;cursor:pointer}
+  input:focus-visible,button:focus-visible{outline:2px solid var(--signal);outline-offset:1px}
+
+  .task{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule)}
+  .box{width:22px;height:22px;flex:none;border:1.5px solid var(--ink);border-radius:8px;background:none;cursor:pointer;font-size:14px;line-height:1;color:var(--paper);display:flex;align-items:center;justify-content:center}
+  .box[aria-checked="true"]{background:var(--ink)}
+  .task .meta{flex:1;min-width:0;cursor:pointer}
+  .task .lab{font-size:16px;letter-spacing:.01em}
+  .task .when{font-size:12px;color:var(--graphite);margin-top:2px}
+  .task.done .lab{text-decoration:line-through;color:var(--graphite)}
+  .task.past .lab{color:var(--graphite)}
+  .task.due .when{color:var(--signal)}
+  .cal{
+    background:none;border:1px solid var(--rule);border-radius:8px;font:inherit;font-size:11px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--graphite);padding:6px 9px;cursor:pointer;flex:none;
+  }
+  .cal:active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .rep{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--graphite);border:1px solid var(--rule);padding:2px 5px;border-radius:8px}
+
+  /* ---------- partage ---------- */
+  #share{
+    margin-top:26px;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px;
+  }
+  #share h3{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);font-weight:600}
+  #share p{font-size:13px;line-height:1.5;color:var(--graphite);margin-top:8px}
+  #share .line{display:flex;gap:8px;margin-top:12px}
+  #dbUrl,#spaceCode{
+    flex:1;min-width:0;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:12px;
+    font-family:"Roboto Mono",ui-monospace,monospace;font-size:14px;color:var(--ink);letter-spacing:.04em;
+  }
+  #spaceBtn{
+    background:var(--ink);color:var(--paper);border:none;border-radius:8px;font:inherit;font-size:12px;
+    letter-spacing:.14em;text-transform:uppercase;padding:12px 16px;cursor:pointer;
+  }
+  #spaceGen{background:none;border:1px solid var(--rule);color:var(--graphite);border-radius:8px;font:inherit;font-size:12px;padding:12px 14px;cursor:pointer}
+  #shareState{font-size:12px;color:var(--graphite);margin-top:10px}
+  #backupBox{margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)}
+  .bkrow{display:flex;gap:8px;flex-wrap:wrap}
+  .bkrow button,#bkImportBtn{
+    flex:1;position:relative;text-align:center;background:none;border:1px solid var(--rule);
+    color:var(--ink);border-radius:8px;font:inherit;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;padding:11px 6px;cursor:pointer;
+  }
+  #bkPull{flex:1 1 100%;border-color:var(--couche);color:var(--couche)}
+  #bkState{font-size:12px;color:var(--graphite);margin-top:8px;line-height:1.45}
+  #notifBox{margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)}
+  #notifBtn{
+    background:none;border:1px solid var(--rule);color:var(--ink);border-radius:8px;font:inherit;
+    font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:11px 14px;cursor:pointer;
+  }
+  #notifBtn.on{background:var(--couche);border-color:var(--couche);color:#fff}
+  #notifState{font-size:12px;color:var(--graphite);margin-top:8px;line-height:1.45}
+
+  /* ---------- onglet notes : éditeur plein écran ---------- */
+  #p3:not([hidden]){display:flex;flex-direction:column}
+  #p3{padding:0;overflow:hidden}
+  #noteInput{
+    flex:1;width:100%;min-height:0;resize:none;
+    background:none;border:none;outline:none;
+    padding:20px 20px 8px;
+    font-family:"Roboto Mono",ui-monospace,SFMono-Regular,monospace;
+    font-size:16px;line-height:1.75;letter-spacing:-.01em;color:var(--ink);
+    -webkit-user-select:text;user-select:text;
+  }
+  #noteInput::placeholder{color:var(--rule)}
+  #noteFoot{
+    display:flex;align-items:center;gap:14px;
+    padding:10px 20px calc(14px + env(safe-area-inset-bottom));
+    border-top:1px solid var(--rule);
+    font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--graphite);
+  }
+  #noteState{margin-left:auto;transition:opacity .3s}
+  #noteClear{background:none;border:none;font:inherit;color:var(--graphite);cursor:pointer;padding:0}
+  #noteClear:active{color:var(--signal)}
+  #noteClear.armed{color:var(--signal);font-weight:600}
+
+  /* ---------- feuille d'édition ---------- */
+  #sheet,#tsheet{position:fixed;inset:0;background:rgba(24,32,40,.45);display:none;align-items:flex-end;z-index:20}
+  #sheet.open,#tsheet.open{display:flex}
+  #sheetbox,#tbox{
+    width:100%;background:var(--paper);border-top:2px solid var(--ink);
+    border-radius:8px 8px 0 0;
+    max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:20px 20px calc(20px + env(safe-area-inset-bottom));
+  }
+  #sheetbox h3,#tbox h3{font-size:20px;letter-spacing:-.01em;color:var(--ink);font-weight:600;margin-bottom:16px}
+  .sline{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+  #eTime{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:12px;font:inherit;font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .quick{background:none;border:1px solid var(--rule);border-radius:8px;font:inherit;font-size:13px;padding:10px 11px;cursor:pointer;color:var(--ink)}
+  .quick:active{background:var(--ink);color:var(--paper)}
+  .seg2{display:flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden;flex:1}
+  .seg2 button{flex:1;background:var(--card);border:none;border-right:1px solid var(--rule);font:inherit;font-size:13px;padding:10px 6px;color:var(--graphite);cursor:pointer}
+  .seg2 button:last-child{border-right:none}
+  .seg2 button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  .kchip{flex:1;border:1px solid var(--rule);background:var(--card);border-radius:8px;font:inherit;font-size:14px;padding:11px 6px;cursor:pointer;color:var(--graphite)}
+  .kchip[aria-pressed="true"][data-k="couche"]{background:var(--couche);border-color:var(--couche);color:#fff}
+  .kchip[aria-pressed="true"][data-k="manger"]{background:var(--biberon);border-color:var(--biberon);color:#fff}
+  .slab{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);margin:0 0 8px}
+  .dchip,.mchip{
+    flex:1;border:1.5px solid var(--rule);background:var(--card);border-radius:8px;font:inherit;
+    font-size:17px;font-weight:500;padding:19px 6px;cursor:pointer;color:var(--ink);
+  }
+  .dchip:active,.mchip:active{border-color:var(--ink)}
+  .dchip[aria-pressed="true"]{background:var(--couche);border-color:var(--couche);color:#fff}
+  .mchip[aria-pressed="true"]{background:var(--biberon);border-color:var(--biberon);color:#fff}
+  #eMl{
+    flex:1;min-width:0;text-align:center;background:var(--card);border:1px solid var(--rule);
+    border-radius:8px;padding:12px;font-family:"Roboto Mono",ui-monospace,monospace;
+    font-size:22px;color:var(--ink);
+  }
+  .unit{font-size:13px;color:var(--graphite);letter-spacing:.1em}
+  #timerBox{
+    display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;
+    background:var(--card);border:1px solid var(--rule);border-radius:8px;
+  }
+  #tClock{
+    flex:1;font-size:36px;font-weight:300;letter-spacing:.01em;color:var(--ink);
+    font-variant-numeric:tabular-nums;line-height:1.1;
+  }
+  #timerBox.idle #tClock{color:var(--rule)}
+  #timerBox.run #tClock{color:var(--signal)}
+  #tToggle{
+    background:var(--ink);color:var(--paper);border:none;border-radius:8px;font:inherit;font-size:12px;
+    letter-spacing:.14em;text-transform:uppercase;padding:12px 16px;cursor:pointer;flex:none;
+  }
+  #timerBox.run #tToggle{background:var(--signal)}
+  #tReset{
+    background:none;border:1px solid var(--rule);color:var(--graphite);border-radius:8px;
+    font:inherit;font-size:15px;padding:10px 12px;cursor:pointer;flex:none;
+  }
+  .tfield{
+    flex:1;min-width:0;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:13px;
+    font-family:"Roboto Mono",ui-monospace,monospace;font-size:20px;color:var(--ink);text-align:center;
+  }
+  .tlab{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);margin:14px 0 8px}
+  #tDoseAuto{
+    background:none;border:1px solid var(--rule);color:var(--graphite);border-radius:8px;font:inherit;
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:12px 14px;cursor:pointer;flex:none;
+  }
+  #tDoseAuto[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  #tAnalyze{
+    flex:1;background:none;border:1px solid var(--rule);color:var(--ink);border-radius:8px;font:inherit;
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:12px;cursor:pointer;
+  }
+  #tAnalyze:active{background:var(--ink);color:var(--paper)}
+  #tAnalysis{font-size:13px;color:var(--graphite);line-height:1.5;margin-top:10px}
+  #tAnalysis b{color:var(--ink);font-weight:600}
+  .ivtab{margin:10px 0 4px;border-top:1px solid var(--rule)}
+  .ivrow{display:flex;align-items:baseline;gap:8px;padding:6px 0;border-bottom:1px solid var(--rule);font-size:13px}
+  .ivrow span{color:var(--graphite)}
+  .ivrow sup{font-size:9px}
+  .ivrow b{margin-left:auto;color:var(--ink);font-variant-numeric:tabular-nums}
+  .ivrow i{font-style:normal;font-size:11px;color:var(--rule);width:52px;text-align:right}
+  #tApply{
+    display:block;margin-top:10px;background:var(--couche);color:#fff;border:none;border-radius:8px;
+    font:inherit;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:11px 14px;cursor:pointer;
+  }
+  #tUndo{background:none;border:none;color:var(--graphite);font:inherit;font-size:12px;
+    text-decoration:underline;cursor:pointer;padding:6px 0 0}
+  #tDose{font-size:13px;color:var(--graphite);line-height:1.5;margin-top:10px}
+  #tDose b{color:var(--ink);font-weight:600}
+  #tCalc{font-size:13px;color:var(--graphite);line-height:1.5;margin-top:10px}
+  #tCalc b{color:var(--ink);font-weight:600}
+  #tDisc{font-size:12px;color:var(--graphite);line-height:1.5;margin-top:14px;padding-top:12px;border-top:1px solid var(--rule)}
+  #eCouche,#eMeal{margin-bottom:18px}
+  .mlline{margin-top:10px}
+  /* bloc date & heure : secondaire, regroupé, en creux */
+  #eWhen{
+    background:var(--sunk);border-radius:8px;padding:12px 12px 4px;margin-bottom:4px;
+  }
+  #eWhen .sline{margin-bottom:10px}
+  #eWhen #eTime{background:var(--paper);border-color:transparent;font-size:19px}
+  #eWhen .quick{border-color:var(--rule);background:none;font-size:12px;padding:9px 8px}
+  #eWhen .seg2{border-color:var(--rule)}
+  #eWhen .seg2 button{background:var(--paper);font-size:12px}
+  #eWhen .seg2 button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  #ver{margin-left:auto;opacity:.6;letter-spacing:.1em}
+  #noteState{margin-left:0}
+  .sactions{display:flex;gap:8px;margin-top:18px}
+  .sactions button{flex:1;border:none;border-radius:8px;font:inherit;font-size:13px;letter-spacing:.14em;text-transform:uppercase;padding:14px 6px;cursor:pointer}
+  #eSave{background:var(--ink);color:var(--paper);flex:2}
+  #eCancel,#tClose{background:none;border:1px solid var(--rule);color:var(--graphite)}
+  #tSave{background:var(--ink);color:var(--paper);flex:2}
+  #eDelete{background:none;border:1px solid var(--signal);color:var(--signal)}
+
+
+  /* ================= MODE NUIT ================= */
+  body.dark{
+    --paper:#12171D; --card:#1B222B; --ink:#E7ECF1; --graphite:#8D98A5;
+    --rule:#2C3742; --sunk:#0C1116;
+    --couche:#3FA8B2; --biberon:#E8A24B; --signal:#FF6F52; --night:#8FA6E0;
+  }
+  body.dark .log-btn{color:#0E1319}
+  body.dark .dchip[aria-pressed="true"],
+  body.dark .mchip[aria-pressed="true"],
+  body.dark .kchip[aria-pressed="true"]{color:#0E1319}
+  body.dark #noteSave,body.dark .form .add{color:#0E1319}
+  body.dark .box[aria-checked="true"]{background:var(--ink)}
+  body.dark .box{border-color:var(--ink);color:var(--paper)}
+  body.dark #sheet,body.dark #tsheet{background:rgba(0,0,0,.6)}
+  body.dark #noteInput::placeholder{color:var(--rule)}
+  body,#gauge,.logcard,#share,.note{transition:background-color .5s ease,border-color .5s ease,color .5s ease}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <div id="dateline"></div>
+    <button id="sync" title="État de la synchronisation"><span id="syncDot"></span><span id="syncLabel">Local</span></button>
+  </div>
+  <div id="ident">
+    <div id="stack">
+      <div class="ps ps3"><img class="psimg" id="idImg3" alt="" hidden><span class="veil"></span></div>
+      <div class="ps ps2"><img class="psimg" id="idImg2" alt="" hidden><span class="veil"></span></div>
+      <div class="ps ps1" id="idPhoto">
+        <img id="idImg" alt="" hidden>
+      </div>
+      <input type="file" id="idFile" class="filepick" accept="image/*">
+      <span id="photoDue" hidden></span>
+    </div>
+    <button id="idAge">
+      <span class="l1">Alban a</span>
+      <span class="l2" id="idBig">—</span>
+      <span class="l3" id="idSmall"></span>
+    </button>
+    <input type="date" id="bDate" class="vh">
+  </div>
+
+  <div id="nudge" hidden><span id="nudgeTxt"></span><input type="file" id="nudgeFile" class="filepick" accept="image/*"></div>
+
+  <nav role="tablist">
+    <button id="t1" role="tab" aria-selected="true" aria-controls="p1">Suivi</button>
+    <button id="t2" role="tab" aria-selected="false" aria-controls="p2">À faire</button>
+    <button id="t3" role="tab" aria-selected="false" aria-controls="p3">Note</button>
+  </nav>
+</header>
+
+<main>
+  <section class="tab" id="p1" role="tabpanel">
+    <div id="next"></div>
+    <div id="tip" hidden>
+      <div id="tipArrow"></div>
+      <button id="tipBar"><span id="tipIcon">💡</span><span id="tipHead"></span><span id="tipChev"></span></button>
+      <div id="tipBody"><p id="tipText"></p><p id="tipWhy"></p></div>
+    </div>
+    <button id="gauge">
+      <div id="gTop"><span id="gLabel">Lait aujourd'hui</span><span id="gPhase"></span><span id="gSet">Régler</span></div>
+      <div id="gNums"><span id="gDone" class="mono">0</span><span id="gTarget" class="mono"></span><span id="gCount" class="mono"></span></div>
+      <div id="gBar"><div id="gFill"></div></div>
+      <div id="gNote"></div>
+      <div id="gDose"></div>
+    </button>
+    <div class="logcard">
+      <div class="grid">
+        <button class="log-btn b-couche" data-kind="couche"><span class="n">Couche</span><span class="s" id="hCouche"></span><span class="s iv" id="ivC"></span></button>
+        <button class="log-btn b-manger" data-kind="manger"><span class="n">Manger</span><span class="s" id="hManger"></span><span class="s iv" id="ivM"></span></button>
+      </div>
+      <button class="log-btn b-both" data-kind="both"><span class="n">Les deux</span><span class="s">Une seule entrée</span></button>
+    </div>
+    <div class="interval">
+      <span class="caps">Couche</span>
+      <button data-ivc="2">2 h</button><button data-ivc="3">3 h</button>
+      <button data-ivc="4">4 h</button><button data-ivc="6">6 h</button>
+    </div>
+    <div class="sechead">
+      <h2 class="sec">Journal</h2>
+      <button id="statsOpen">Voir les stats 🍼</button>
+    </div>
+    <div id="log"></div>
+
+    <div id="share">
+      <h3>Partage à deux</h3>
+      <p>Saisissez le même code sur les deux téléphones. Entrées, tâches et note sont alors synchronisées en temps réel.</p>
+      <div class="line">
+        <input id="dbUrl" placeholder="https://…firebasedatabase.app" autocomplete="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="line">
+        <input id="spaceCode" placeholder="code d'espace" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button id="spaceGen" title="Générer un code">⟳</button>
+        <button id="spaceBtn">Relier</button>
+      </div>
+      <div id="shareState"></div>
+      <div id="backupBox">
+        <div class="bkrow">
+          <button id="bkPull">⤓ Récupérer depuis le serveur</button>
+        </div>
+        <div class="bkrow">
+          <button id="bkExport">Exporter</button>
+          <span id="bkImportBtn">Importer<input type="file" id="bkFile" class="filepick" accept=".json,application/json"></span>
+          <button id="bkRestore">Sauvegarde locale</button>
+        </div>
+        <div id="bkState"></div>
+      </div>
+      <div id="notifBox">
+        <button id="notifBtn">Activer les rappels</button>
+        <div id="notifState"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tab" id="p2" role="tabpanel" hidden>
+    <div class="form">
+      <input type="text" id="tLabel" placeholder="Doliprane, vitamine D…" autocomplete="off">
+      <input type="time" id="tTime">
+      <div class="seg" id="tDay">
+        <button data-d="0" aria-pressed="true">Aujourd'hui</button>
+        <button data-d="1" aria-pressed="false">Demain</button>
+      </div>
+      <button class="add" id="tAdd">Ajouter</button>
+      <label class="caps" style="display:flex;align-items:center;gap:7px;flex:1 1 100%;padding-top:2px">
+        <input type="checkbox" id="tRepeat"> Répéter chaque jour
+      </label>
+      <label class="caps" style="display:flex;align-items:center;gap:7px;flex:1 1 100%">
+        <input type="checkbox" id="tCal" checked> Créer aussi un rappel calendrier
+      </label>
+    </div>
+    <h2 class="sec">À venir</h2>
+    <div id="upcoming"></div>
+    <h2 class="sec">Passé</h2>
+    <div id="past"></div>
+  </section>
+
+  <section class="tab" id="p3" role="tabpanel" hidden>
+    <textarea id="noteInput" placeholder="Écrire…" spellcheck="true"></textarea>
+    <div id="noteFoot">
+      <button id="noteClear">Effacer</button>
+      <span id="noteCount"></span>
+      <span id="noteState"></span>
+      <span id="ver"></span>
+    </div>
+  </section>
+</main>
+
+<section id="tm" role="dialog" aria-modal="true">
+  <div id="tmHead">
+    <button id="tmBack" aria-label="Retour">←</button>
+    <span id="tmTitle">Time machine</span>
+    <span id="tmAdd">+ Photo<input type="file" id="tmFile" class="filepick" accept="image/*"></span>
+  </div>
+  <div id="tmBody">
+    <div id="tmAge">—</div>
+    <div id="tmSub"></div>
+    <div id="tmDateRow">
+      <button id="tmDate" aria-label="Modifier la date de la photo">
+        <svg viewBox="0 0 22 22" width="19" height="19" aria-hidden="true">
+          <path d="M6 2.5v2M16 2.5v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <rect x="3.2" y="4" width="15.6" height="15" rx="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M3.2 9.4h15.6" stroke="currentColor" stroke-width="1.6"/>
+        </svg>
+        <span class="caret"></span>
+      </button>
+      <button id="tmTrash" aria-label="Supprimer cette photo">
+        <svg viewBox="0 0 22 22" width="19" height="19" aria-hidden="true">
+          <path d="M4.5 6h13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M9 6V4.6h4V6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M6.4 6l.8 11.2a1.6 1.6 0 001.6 1.5h4.4a1.6 1.6 0 001.6-1.5L15.6 6"
+                fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M9.6 9.4v6M12.4 9.4v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <input type="date" id="pDate" class="vh">
+    <div id="tmFrame"><img id="tmImg" alt=""></div>
+    <div id="tmRailWrap"><div id="tmRail"><div id="tmTrack"></div></div></div>
+    <div id="tmNote"></div>
+  </div>
+</section>
+
+<section id="stats" role="dialog" aria-modal="true">
+  <div id="stHead">
+    <button id="stBack" aria-label="Retour">←</button>
+    <span id="stTitle">Statistiques</span>
+  </div>
+  <div id="stBody">
+    <div id="stSeg">
+      <button data-r="7" aria-pressed="true">7 j</button>
+      <button data-r="14" aria-pressed="false">14 j</button>
+      <button data-r="30" aria-pressed="false">30 j</button>
+      <button data-r="90" aria-pressed="false">3 mois</button>
+    </div>
+    <div id="stMetric">
+      <button data-m="ml" aria-pressed="true">Volume</button>
+      <button data-m="dur" aria-pressed="false">Durée ⏱</button>
+      <button data-m="rhythm" aria-pressed="false">Rythme</button>
+    </div>
+    <div id="stRead"></div>
+    <div id="chartWrap">
+      <div id="chart"><div id="bars"></div></div>
+      <div id="tline"><span id="tlab"></span></div>
+    </div>
+    <div id="rhythm" hidden>
+      <div id="rAxis"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>24h</span></div>
+      <div id="rRows"></div>
+    </div>
+    <div id="stSum"></div>
+    <div id="stNote"></div>
+  </div>
+</section>
+
+<div id="sheet" role="dialog" aria-modal="true">
+  <div id="sheetbox">
+    <h3 id="eTitle">Modifier l'entrée</h3>
+
+    <div class="sline" id="eKinds">
+      <button class="kchip" data-k="couche">Couche</button>
+      <button class="kchip" data-k="manger">Manger</button>
+    </div>
+
+    <div id="eCouche">
+      <div class="sline">
+        <button class="dchip" data-c="pipi">Pipi</button>
+        <button class="dchip" data-c="caca">Caca</button>
+        <button class="dchip" data-c="both">Les deux</button>
+      </div>
+    </div>
+
+    <div id="eMeal">
+      <div class="sline mlline">
+        <button class="quick" data-ml="-10">−10</button>
+        <input id="eMl" type="number" inputmode="numeric" min="0" step="5">
+        <span class="unit">ml</span>
+        <button class="quick" data-ml="10">+10</button>
+      </div>
+      <div id="timerBox">
+        <div id="tClock" class="mono">00:00</div>
+        <button id="tToggle">Démarrer</button>
+        <button id="tReset" aria-label="Réinitialiser">↺</button>
+      </div>
+    </div>
+
+    <div id="eWhen">
+      <div class="slab">Quand</div>
+      <div class="sline">
+        <input type="time" id="eTime" step="60">
+        <button class="quick" data-adj="-5">−5 min</button>
+        <button class="quick" data-adj="-15">−15</button>
+        <button class="quick" data-adj="-30">−30</button>
+      </div>
+      <div class="sline"><div class="seg2" id="eDay"></div></div>
+    </div>
+
+    <div class="sactions">
+      <button id="eCancel">Annuler</button>
+      <button id="eDelete">Supprimer</button>
+      <button id="eSave">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div id="tsheet" role="dialog" aria-modal="true">
+  <div id="tbox">
+    <h3>Ration journalière</h3>
+    <div class="tlab">Poids du bébé</div>
+    <div class="sline">
+      <input id="tWeight" class="tfield" type="number" inputmode="numeric" min="0" step="10" placeholder="3500">
+      <span class="unit">g</span>
+      <div class="seg2" id="tConst">
+        <button data-k="200">+200</button><button data-k="250">+250</button>
+      </div>
+    </div>
+    <div id="tCalc"></div>
+    <div class="tlab">Objectif retenu</div>
+    <div class="sline">
+      <input id="tTarget" class="tfield" type="number" inputmode="numeric" min="0" step="10" placeholder="750">
+      <span class="unit">ml</span>
+    </div>
+    <div class="tlab">Biberons par jour</div>
+    <div class="sline">
+      <input id="tBottles" class="tfield" type="number" inputmode="numeric" min="1" max="12" step="1" placeholder="8">
+      <span class="unit">🍼 total</span>
+    </div>
+    <div class="tlab">Quantité par biberon</div>
+    <div class="sline">
+      <input id="tDoseInput" class="tfield" type="number" inputmode="numeric" min="0" step="5" placeholder="95">
+      <span class="unit">ml</span>
+      <button id="tDoseAuto">Auto</button>
+    </div>
+    <div class="sline">
+      <button id="tAnalyze">Analyser les 5 derniers jours</button>
+    </div>
+    <div id="tAnalysis"></div>
+    <div id="tDose"></div>
+    <div id="tDisc">Règle d'Appert : poids en grammes ÷ 10 + 250 ml. Repère indicatif pour l'alimentation au biberon, valable jusqu'à environ 6 kg. À ajuster selon l'appétit du bébé et l'avis de votre pédiatre.</div>
+    <div class="sactions">
+      <button id="tClose">Annuler</button>
+      <button id="tSave">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* ============================================================
+   CONFIGURATION — collez ici l'URL de votre Realtime Database
+   (Firebase → Realtime Database → l'adresse en haut de la page)
+   Laissez vide pour garder l'app 100 % locale.
+   ============================================================ */
+const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebasedatabase.app";
+</script>
+<script>
+(function(){
+  "use strict";
+  const KEY="suivi.v1";
+  const store=(()=>{try{localStorage.setItem("_t","1");localStorage.removeItem("_t");
+    return{get:()=>localStorage.getItem(KEY),set:v=>localStorage.setItem(KEY,v)};}
+    catch(e){let m=null;return{get:()=>m,set:v=>m=v};}})();
+
+  let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,ivProfile:null,target:null,weight:null,appert:250,bottles:null,dose:null,ivTarget:null,birth:null};
+  try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
+  // migration : les anciennes entrées sans id
+  const VERSION="5.7";
+  let seq=0;
+  const dev=Math.random().toString(36).slice(2,6);
+  const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
+  function normalize(e){
+    e.id=String(e.id||uid());
+    e.kinds=(e.kinds||[]).map(k=>k==="biberon"?"manger":k);
+    e.couche=Array.isArray(e.couche)?e.couche:[];
+    if(e.kinds.includes("manger")&&!e.meal) e.meal={type:"biberon",ml:null};
+    return e;
+  }
+  db.entries.forEach(normalize);
+  db.tasks.forEach(t=>{t.id=String(t.id||uid());});
+  if(!Array.isArray(db.notes))db.notes=[];
+  const BAK_KEY="suivi.v1.bak";
+  function saveLocal(){
+    const json=JSON.stringify(db);
+    // sauvegarde de secours dès que le jeu de données est significatif
+    try{
+      if(db.entries.length){
+        const bak=localStorage.getItem(BAK_KEY);
+        let prev=null; try{ prev=JSON.parse(bak||"null"); }catch(e){}
+        if(!prev || (prev.entries||[]).length<=db.entries.length)
+          localStorage.setItem(BAK_KEY,json);
+      }
+    }catch(e){}
+    try{ store.set(json); }
+    catch(e){                       // quota saturé : on libère les photos avant de réessayer
+      try{ localStorage.removeItem("suivi.photos"); store.set(json); }catch(e2){}
+    }
+  }
+  let remote=null;                    // référence Firebase de l'espace, ou null
+  let spaceCode="";                   // code de l'espace relié
+  const push=(path,val)=>{ if(remote){ try{ remote.child(path).set(val); }catch(e){} } };
+  const drop=path=>{ if(remote){ try{ remote.child(path).remove(); }catch(e){} } };
+
+  function putEntry(e){ saveLocal(); push("entries/"+e.id,e); }
+  function delEntry(id){ seen.add(id); saveSeen(); saveLocal(); drop("entries/"+id); }
+  function putTask(t){ saveLocal(); push("tasks/"+t.id,t); }
+  function delTask(id){ seen.add(id); saveSeen(); saveLocal(); drop("tasks/"+id); }
+  function putNote(v){ saveLocal(); push("note",v); }
+  function putIv(v){ saveLocal(); push("iv",v); }
+  const save=saveLocal;
+
+  const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+  const sod=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime();
+  const hm=ts=>new Date(ts).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}).replace(":","h");
+  const sc=ts=>String(new Date(ts).getSeconds()).padStart(2,"0");
+  const pad=n=>String(n).padStart(2,"0");
+  const toTimeInput=ts=>{const d=new Date(ts);return pad(d.getHours())+":"+pad(d.getMinutes());};
+  function dayLabel(ts){
+    const diff=Math.round((sod(new Date())-sod(new Date(ts)))/864e5);
+    if(diff===0)return"Aujourd'hui"; if(diff===1)return"Hier"; if(diff===-1)return"Demain";
+    return new Date(ts).toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
+  }
+  function delta(ts){
+    const m=Math.round((ts-Date.now())/6e4),a=Math.abs(m);
+    const s=(a>=60?Math.floor(a/60)+" h "+pad(a%60):a+" min");
+    return m>=0?"dans "+s:"il y a "+s;
+  }
+  const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+  function tab(n){
+    [1,2,3].forEach(i=>{
+      $("#t"+i).setAttribute("aria-selected",i===n);
+      $("#p"+i).hidden=i!==n;
+    });
+  }
+  $("#t1").onclick=()=>tab(1); $("#t2").onclick=()=>tab(2); $("#t3").onclick=()=>tab(3);
+
+  /* ================= ONGLET 1 ================= */
+  const NIGHT_START=21.5, NIGHT_END=7;
+  const NIGHT_H=(24-NIGHT_START)+NIGHT_END;   // 9,5 h
+  const DAY_H=24-NIGHT_H;                     // 14,5 h
+
+  function isNight(ts){
+    const d=new Date(ts), h=d.getHours()+d.getMinutes()/60;
+    return h>=NIGHT_START || h<NIGHT_END;
+  }
+  // combien de biberons déjà pris le jour de ts, jusqu'à ts inclus
+  function rankOf(ts){
+    const d0=sod(new Date(ts));
+    return db.entries.filter(e=>e.kinds.includes("manger")&&e.ts>=d0&&e.ts<=ts).length;
+  }
+
+  // l'écart dépend du rang dans la journée : profil observé, puis repli sur la moyenne
+  function mealIv(ts){
+    const t=(typeof ts==="number")?ts:Date.now();
+    const prof=Array.isArray(db.ivProfile)?db.ivProfile:null;
+    if(prof && prof.length){
+      const r=Math.max(1,rankOf(t));
+      const g=prof[Math.min(r,prof.length)-1];
+      if(g>0) return g;
+    }
+    if(db.ivTarget>0) return db.ivTarget;
+    return db.bottles>0 ? 24/db.bottles : db.iv;
+  }
+  function ivHours(){ return mealIv(Date.now()); }
+  function fmtIv(h){
+    const m=Math.round(h*60);
+    return (m%60===0) ? (m/60)+" h" : Math.floor(m/60)+" h "+pad(m%60);
+  }
+
+  const sorted=()=>db.entries.slice().sort((a,b)=>a.ts-b.ts);
+  function lastOf(kind){
+    const s=sorted();
+    for(let i=s.length-1;i>=0;i--) if(s[i].kinds.includes(kind)) return s[i].ts;
+    return null;
+  }
+
+  function entryLabel(e){
+    const out=[];
+    if(e.kinds.includes("couche"))
+      out.push("Couche"+(e.couche.length?' <i>· '+e.couche.join(" + ")+'</i>':""));
+    if(e.kinds.includes("manger")){
+      const t=(e.meal&&e.meal.type)||"biberon";
+      const nom = t==="sein" ? "Sein" : t==="both" ? "Sein + biberon" : "Biberon";
+      out.push(nom+(e.meal&&e.meal.ml?' <i>· '+e.meal.ml+' ml</i>':"")+
+        (e.meal&&e.meal.dur?' <i>· '+Math.max(1,Math.round(e.meal.dur/60))+' min</i>':""));
+    }
+    return out.join(" + ");
+  }
+
+  let guard=0; // anti-doublon : ignore un second déclenchement immédiat
+  function renderNext(){
+    const box=$("#next"); box.innerHTML="";
+    [["couche","Prochaine couche"],["manger","Prochain repas"]].forEach(([k,lbl])=>{
+      const last=lastOf(k);
+      const b=document.createElement("div");
+      b.className="npill "+k;
+      if(last===null){
+        b.innerHTML='<span class="lbl">'+lbl+'</span><span class="t">—</span><span class="d">aucune entrée</span>';
+      }else{
+        const nxt=last+((k==="couche"?db.ivCouche:mealIv(last))*36e5);
+        if(nxt<=Date.now())b.classList.add("due");
+        b.innerHTML='<span class="lbl">'+lbl+'</span><span class="t mono">'+hm(nxt)+'</span>'+
+                    '<span class="d">'+dayLabel(nxt)+' · '+delta(nxt)+'</span>';
+      }
+      box.appendChild(b);
+    });
+    const lc=lastOf("couche"), lb=lastOf("manger");
+    $("#hCouche").textContent=lc?"dernière "+hm(lc):"aucune";
+    $("#hManger").textContent=lb?"dernier "+hm(lb):"aucun";
+    $("#ivC").textContent="(intervalle "+fmtIv(db.ivCouche)+")";
+    $("#ivM").textContent="(intervalle "+fmtIv(mealIv(lb||Date.now()))+")";
+  }
+
+  const openGroups=new Set();
+
+  function rowHTML(e,withDay){
+    return '<div class="row" data-id="'+e.id+'">'+
+      e.kinds.map(k=>'<span class="dot '+k+'"></span>').join("")+
+      '<span class="hm mono">'+hm(e.ts)+'</span><span class="sec2 mono">:'+sc(e.ts)+'</span>'+
+      '<span class="kind">'+entryLabel(e)+'</span>'+
+      (withDay?'<span class="day">'+dayLabel(e.ts)+'</span>':'')+'</div>';
+  }
+
+  const groupMl=items=>items.reduce((n,e)=>
+    n + (e.kinds.includes("manger") ? ((e.meal&&e.meal.ml)||0) : 0), 0);
+  const groupBottles=items=>items.reduce((n,e)=>{
+    if(!e.kinds.includes("manger")) return n;
+    const t=(e.meal&&e.meal.type)||"biberon";
+    return n + ((t==="biberon"||t==="both")?1:0);
+  },0);
+
+  function groupEntries(list){
+    const now=new Date(), today=sod(now), yest=today-864e5;
+    const month=new Date(now.getFullYear(),now.getMonth(),1).getTime();
+    const groups=[], byKey={};
+    const bucket=(key,label)=>{
+      if(!byKey[key]){ byKey[key]={key,label,items:[]}; groups.push(byKey[key]); }
+      return byKey[key];
+    };
+    const last7=today-6*864e5;   // J-0 à J-6 détaillés jour par jour
+    list.forEach(e=>{
+      if(e.ts>=today) bucket("today","Aujourd'hui").items.push(e);
+      else if(e.ts>=yest) bucket("yest","Hier").items.push(e);
+      else if(e.ts>=last7){
+        const d0=sod(new Date(e.ts));
+        let lab=new Date(d0).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric"});
+        lab=lab.charAt(0).toUpperCase()+lab.slice(1);
+        bucket("d"+d0,lab).daily=true;
+        byKey["d"+d0].items.push(e);
+      }
+      else if(e.ts>=month) bucket("month","Plus tôt ce mois-ci").items.push(e);
+      else{
+        const d=new Date(e.ts), k="m"+d.getFullYear()+"-"+d.getMonth();
+        const nom=d.toLocaleDateString("fr-FR",{month:"long"});
+        const lab="En "+nom+(d.getFullYear()!==now.getFullYear()?" "+d.getFullYear():"");
+        bucket(k,lab).items.push(e);
+      }
+    });
+    return groups;
+  }
+
+  function renderLog(){
+    const el=$("#log"), list=sorted().reverse();
+    if(!list.length){el.innerHTML='<div class="empty">Aucune entrée. Touchez Couche ou Manger.</div>';return;}
+    let html="";
+    groupEntries(list).forEach(g=>{
+      const daily = g.key==="today" || g.key==="yest" || g.daily;
+      const tot = daily
+        ? '<span class="gbot">'+groupBottles(g.items)+' 🍼</span> '+groupMl(g.items)+' ml'
+        : g.items.length;
+      if(g.key==="today"){
+        html+='<div class="grouplab"><span>Aujourd\'hui</span><span class="mono">'+tot+'</span></div>'+
+              g.items.map(e=>rowHTML(e,false)).join("");
+        return;
+      }
+      const open=openGroups.has(g.key);
+      html+='<button class="acc" data-g="'+g.key+'" aria-expanded="'+open+'">'+
+            '<span class="chev"></span><span class="albl">'+g.label+'</span>'+
+            '<span class="acnt mono">'+tot+'</span></button>'+
+            '<div class="accbody"'+(open?"":" hidden")+'>'+
+            g.items.map(e=>rowHTML(e,true)).join("")+'</div>';
+    });
+    el.innerHTML=html;
+    el.querySelectorAll(".row").forEach(r=>r.addEventListener("click",()=>openSheet(r.dataset.id)));
+    el.querySelectorAll(".acc").forEach(a=>a.addEventListener("click",()=>{
+      const k=a.dataset.g;
+      if(openGroups.has(k)) openGroups.delete(k); else openGroups.add(k);
+      a.setAttribute("aria-expanded",openGroups.has(k));
+      a.nextElementSibling.hidden=!openGroups.has(k);
+    }));
+  }
+
+  function renderTab1(){
+    $("#dateline").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+    $$("[data-ivc]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.ivc===db.ivCouche));
+    renderIdent(); renderNext(); renderLog(); renderGauge(); renderTip();
+  }
+
+  $$(".log-btn").forEach(b=>b.addEventListener("click",()=>
+    openCompose(b.dataset.kind==="both"?["couche","manger"]:[b.dataset.kind])));
+  $$("[data-ivc]").forEach(b=>b.addEventListener("click",()=>{
+    db.ivCouche=+b.dataset.ivc; saveLocal(); push("ivCouche",db.ivCouche); renderTab1();
+  }));
+
+  /* ---------- feuille d'édition ---------- */
+  let editing=null;          // {type:'entry'|'task', id}
+  let eKinds=[], eDayOffset=0, eBase=null;
+  let eCouche=[], eMeal={type:"biberon",ml:null}, eDur=null, tRun=null, tTick=null;
+
+  function paintDetails(){
+    const hasC=eKinds.includes("couche"), hasM=eKinds.includes("manger");
+    $("#eCouche").style.display=hasC?"":"none";
+    $("#eMeal").style.display=hasM?"":"none";
+    $$(".dchip").forEach(c=>{
+      const k=c.dataset.c;
+      const on = k==="both" ? (eCouche.length===2) : (eCouche.length===1 && eCouche[0]===k);
+      c.setAttribute("aria-pressed",on);
+    });
+    $("#eMl").value = eMeal.ml==null ? "" : eMeal.ml;
+    paintTimer();
+  }
+
+  function dayOptions(sel){
+    const box=$("#eDay"); box.innerHTML="";
+    [[0,"Aujourd'hui"],[-1,"Hier"],[1,"Demain"]].forEach(([off,lbl])=>{
+      const b=document.createElement("button"); b.type="button"; b.textContent=lbl;
+      b.setAttribute("aria-pressed",off===sel);
+      b.addEventListener("click",()=>{eDayOffset=off;dayOptions(off);});
+      box.appendChild(b);
+    });
+  }
+
+  const mmss=sec=>pad(Math.floor(sec/60))+":"+pad(sec%60);
+
+  function paintTimer(){
+    const box=$("#timerBox");
+    const run=tRun!=null;
+    const sec = run ? Math.floor((Date.now()-tRun)/1000) : (eDur||0);
+    $("#tClock").textContent=mmss(sec);
+    box.classList.toggle("run",run);
+    box.classList.toggle("idle",!run && !eDur);
+    $("#tToggle").textContent = run ? "Arrêter" : (eDur ? "Reprendre" : "Démarrer");
+  }
+
+  function stopTimer(){
+    if(tRun==null) return;
+    eDur=(eDur||0)+Math.floor((Date.now()-tRun)/1000);
+    tRun=null; clearInterval(tTick); tTick=null;
+    // l'heure de fin devient l'heure de l'entrée
+    eDayOffset=0; $("#eTime").value=toTimeInput(Date.now()); dayOptions(0);
+    paintTimer();
+  }
+
+  function resetTimer(){
+    tRun=null; if(tTick){clearInterval(tTick);tTick=null;}
+    eDur=null; paintTimer();
+  }
+
+  $("#tToggle").addEventListener("click",()=>{
+    if(tRun!=null){ stopTimer(); return; }
+    tRun=Date.now();
+    tTick=setInterval(paintTimer,1000);
+    paintTimer();
+  });
+  $("#tReset").addEventListener("click",resetTimer);
+
+  function openCompose(kinds){
+    const now=Date.now();
+    if(now-guard<600) return;
+    guard=now;
+    editing={type:"entry",id:null,mode:"compose"};
+    eKinds=kinds.slice(); eCouche=[]; eMeal={type:"biberon",ml:(doseParBiberon()||20)};
+    resetTimer();
+    eDayOffset=0; eBase=now;
+    $("#eTitle").textContent = kinds.length>1 ? "Couche + repas"
+                             : kinds[0]==="couche" ? "Couche" : "Repas";
+    $("#eTime").value=toTimeInput(now);
+    dayOptions(0);
+    $("#eKinds").style.display="none";
+    $("#eDelete").style.display="none";
+    paintDetails();
+    $("#sheet").classList.add("open");
+  }
+
+  function openSheet(id){
+    const e=db.entries.find(x=>x.id===id); if(!e)return;
+    editing={type:"entry",id,mode:"edit"};
+    eBase=e.ts; eKinds=e.kinds.slice();
+    eCouche=(e.couche||[]).slice();
+    eMeal={type:(e.meal&&e.meal.type)||"biberon",ml:(e.meal&&e.meal.ml!=null)?e.meal.ml:null};
+    tRun=null; if(tTick){clearInterval(tTick);tTick=null;}
+    eDur=(e.meal&&e.meal.dur)||null;
+    eDayOffset=-Math.round((sod(new Date())-sod(new Date(e.ts)))/864e5);
+    $("#eTitle").textContent="Modifier l'entrée";
+    $("#eTime").value=toTimeInput(e.ts);
+    dayOptions(eDayOffset);
+    $("#eKinds").style.display="";
+    $$(".kchip").forEach(c=>c.setAttribute("aria-pressed",eKinds.includes(c.dataset.k)));
+    paintDetails();
+    $("#eDelete").style.display="";
+    $("#sheet").classList.add("open");
+  }
+
+  function openTaskSheet(id){
+    const t=db.tasks.find(x=>x.id===id); if(!t)return;
+    editing={type:"task",id};
+    eBase=t.due;
+    eDayOffset=-Math.round((sod(new Date())-sod(new Date(t.due)))/864e5);
+    $("#eTitle").textContent="Modifier "+t.label;
+    $("#eTime").value=toTimeInput(t.due);
+    dayOptions(eDayOffset);
+    $("#eKinds").style.display="none";
+    $("#eCouche").style.display="none"; $("#eMeal").style.display="none";
+    $("#eDelete").style.display="";
+    $("#sheet").classList.add("open");
+  }
+
+  const closeSheet=()=>{
+    if(tTick){clearInterval(tTick);tTick=null;} tRun=null;
+    $("#sheet").classList.remove("open");editing=null;
+  };
+  $("#eCancel").addEventListener("click",closeSheet);
+  $("#sheet").addEventListener("click",ev=>{if(ev.target===$("#sheet"))closeSheet();});
+
+  $$(".kchip").forEach(c=>c.addEventListener("click",()=>{
+    const k=c.dataset.k;
+    if(eKinds.includes(k)){ if(eKinds.length>1) eKinds=eKinds.filter(x=>x!==k); }
+    else eKinds.push(k);
+    $$(".kchip").forEach(x=>x.setAttribute("aria-pressed",eKinds.includes(x.dataset.k)));
+  }));
+
+  $$(".dchip").forEach(c=>c.addEventListener("click",()=>{
+    const k=c.dataset.c;
+    if(k==="both") eCouche=["pipi","caca"];
+    else eCouche=(eCouche.length===1&&eCouche[0]===k)?[]:[k];
+    paintDetails();
+    // couche seule en création : un seul geste suffit
+    if(editing&&editing.mode==="compose"&&!eKinds.includes("manger")&&eCouche.length) commit();
+  }));
+
+
+  $$("[data-ml]").forEach(b=>b.addEventListener("click",()=>{
+    const cur=parseInt($("#eMl").value,10);
+    eMeal.ml=Math.max(0,(isNaN(cur)?(doseParBiberon()||20):cur)+(+b.dataset.ml));
+    paintDetails();
+  }));
+  $("#eMl").addEventListener("input",()=>{
+    const v=parseInt($("#eMl").value,10);
+    eMeal.ml=isNaN(v)?null:v;
+  });
+
+  $$(".quick[data-adj]").forEach(b=>b.addEventListener("click",()=>{
+    const [h,m]=$("#eTime").value.split(":").map(Number);
+    const d=new Date(); d.setHours(h,m+(+b.dataset.adj),0,0);
+    // si le retrait fait passer avant minuit, on recule d'un jour
+    if(m+(+b.dataset.adj)<0 && h===0){ eDayOffset-=1; dayOptions(eDayOffset); }
+    $("#eTime").value=toTimeInput(d.getTime());
+  }));
+
+  function composedTs(){
+    const [h,m]=$("#eTime").value.split(":").map(Number);
+    const d=new Date(); d.setDate(d.getDate()+eDayOffset); d.setHours(h,m,0,0);
+    return d.getTime();
+  }
+
+  function commit(){
+    if(!editing)return;
+    if(tRun!=null) stopTimer();
+    const data={
+      ts:composedTs(),
+      kinds:eKinds.slice(),
+      couche:eKinds.includes("couche")?eCouche.slice():[],
+      meal:eKinds.includes("manger")?{type:eMeal.type,ml:eMeal.ml==null?null:eMeal.ml,dur:eDur||null}:null
+    };
+    if(editing.mode==="compose"){
+      const e=normalize(Object.assign({id:uid()},data));
+      db.entries.push(e); putEntry(e);
+      if(navigator.vibrate)navigator.vibrate(12);
+    }else{
+      const e=db.entries.find(x=>x.id===editing.id);
+      if(e){ Object.assign(e,data); normalize(e); putEntry(e); }
+    }
+    renderTab1(); closeSheet();
+  }
+
+  $("#eSave").addEventListener("click",()=>{
+    if(!editing)return;
+    if(editing.type==="entry"){ commit(); return; }
+    {
+      const t=db.tasks.find(x=>x.id===editing.id);
+      if(t){ t.due=composedTs(); putTask(t); }
+      renderTasks();
+    }
+    closeSheet();
+  });
+
+  $("#eDelete").addEventListener("click",()=>{
+    if(!editing)return;
+    if(editing.type==="entry"){ db.entries=db.entries.filter(x=>x.id!==editing.id); delEntry(editing.id); renderTab1(); }
+    else { db.tasks=db.tasks.filter(x=>x.id!==editing.id); delTask(editing.id); renderTasks(); }
+    closeSheet();
+  });
+
+  /* ================= ONGLET 2 ================= */
+  let pickDay=0;
+  $$("#tDay button").forEach(b=>b.addEventListener("click",()=>{
+    pickDay=+b.dataset.d;
+    $$("#tDay button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+  }));
+
+  function addTask(){
+    const label=$("#tLabel").value.trim(), tv=$("#tTime").value;
+    if(!label||!tv){ (label?$("#tTime"):$("#tLabel")).focus(); return; }
+    const [h,m]=tv.split(":").map(Number);
+    const d=new Date(); d.setDate(d.getDate()+pickDay); d.setHours(h,m,0,0);
+    const t={id:uid(),label,due:d.getTime(),done:null,repeat:$("#tRepeat").checked};
+    db.tasks.push(t); putTask(t);
+    $("#tLabel").value=""; renderTasks();
+    if($("#tCal").checked) addToCalendar(t);
+  }
+  $("#tAdd").addEventListener("click",addTask);
+  $("#tLabel").addEventListener("keydown",e=>{if(e.key==="Enter")addTask();});
+
+  function toggle(id){
+    const t=db.tasks.find(x=>x.id===id); if(!t)return;
+    if(t.done) t.done=null;
+    else{
+      t.done=Date.now();
+      if(t.repeat && !db.tasks.some(x=>x.label===t.label&&x.due===t.due+864e5)){
+        const n={id:uid(),label:t.label,due:t.due+864e5,done:null,repeat:true};
+        db.tasks.push(n); putTask(n);
+      }
+    }
+    putTask(t); renderTasks();
+  }
+
+  function taskHTML(t){
+    const late=!t.done&&t.due<=Date.now();
+    return '<div class="task'+(t.done?" done":"")+(t.due<Date.now()?" past":"")+(late?" due":"")+'">'+
+      '<button class="box" role="checkbox" aria-checked="'+(!!t.done)+'" data-t="'+t.id+'">'+(t.done?"✓":"")+'</button>'+
+      '<div class="meta" data-e="'+t.id+'"><div class="lab">'+esc(t.label)+'</div>'+
+      '<div class="when mono">'+hm(t.due)+' · '+dayLabel(t.due)+
+        (t.done?' · pris à '+hm(t.done):' · '+delta(t.due))+'</div></div>'+
+      (t.done?"":'<button class="cal" data-cal="'+t.id+'" title="Ajouter au calendrier">Rappel</button>')+
+      (t.repeat?'<span class="rep">jour</span>':'')+
+      '<button class="del" data-x="'+t.id+'" aria-label="Supprimer">×</button></div>';
+  }
+
+  function renderTasks(){
+    const now=Date.now();
+    const up=db.tasks.filter(t=>!t.done&&t.due>=now).sort((a,b)=>a.due-b.due);
+    const old=db.tasks.filter(t=>t.done||t.due<now).sort((a,b)=>(b.done||b.due)-(a.done||a.due));
+    $("#upcoming").innerHTML=up.length?up.map(taskHTML).join(""):'<div class="empty">Rien de prévu.</div>';
+    $("#past").innerHTML=old.length?old.map(taskHTML).join(""):'<div class="empty">Rien pour l\'instant.</div>';
+    $$("[data-t]").forEach(b=>b.addEventListener("click",()=>toggle(b.dataset.t)));
+    $$("[data-e]").forEach(b=>b.addEventListener("click",()=>openTaskSheet(b.dataset.e)));
+    $$("[data-cal]").forEach(b=>b.addEventListener("click",()=>
+      addToCalendar(db.tasks.find(t=>t.id===b.dataset.cal))));
+    $$("[data-x]").forEach(b=>b.addEventListener("click",()=>{
+      db.tasks=db.tasks.filter(t=>t.id!==b.dataset.x); delTask(b.dataset.x); renderTasks();}));
+  }
+
+
+  /* ================= ONGLET 3 : ÉDITEUR ================= */
+  const nInput=$("#noteInput"), nState=$("#noteState"), nCount=$("#noteCount");
+  let nTimer=null;
+
+  // reprise des anciennes notes séparées, s'il y en avait
+  if(typeof db.note!=="string"){
+    db.note = Array.isArray(db.notes)&&db.notes.length
+      ? db.notes.slice().sort((a,b)=>a.ts-b.ts).map(n=>n.text).join("\n\n")
+      : "";
+    delete db.notes; save();
+  }
+  nInput.value=db.note;
+
+  function counts(){
+    const t=nInput.value.trim();
+    const w=t?t.split(/\s+/).length:0;
+    nCount.textContent=w+(w>1?" mots":" mot");
+  }
+  function flush(){
+    if(db.note===nInput.value)return;
+    db.note=nInput.value; putNote(db.note);
+    nState.textContent="Enregistré"; nState.style.opacity="1";
+    clearTimeout(flush._f);
+    flush._f=setTimeout(()=>{nState.style.opacity="0";},1400);
+  }
+  nInput.addEventListener("input",()=>{
+    counts(); nState.textContent="…"; nState.style.opacity="1";
+    clearTimeout(nTimer); nTimer=setTimeout(flush,500);
+  });
+  nInput.addEventListener("blur",flush);
+  document.addEventListener("visibilitychange",()=>{if(document.hidden)flush();});
+  window.addEventListener("pagehide",flush);
+  const nClear=$("#noteClear"); let armed=null;
+  function disarm(){ clearTimeout(armed); armed=null; nClear.classList.remove("armed"); nClear.textContent="Effacer"; }
+  nClear.addEventListener("click",()=>{
+    if(!nInput.value){ disarm(); return; }
+    if(armed){ nInput.value=""; flush(); counts(); disarm(); return; }
+    nClear.classList.add("armed"); nClear.textContent="Confirmer";
+    armed=setTimeout(disarm,4000);
+  });
+  nInput.addEventListener("focus",disarm);
+  counts();
+  $("#ver").textContent="v"+VERSION;
+
+
+  /* ================= SYNCHRONISATION ================= */
+  const SPACE_KEY="suivi.space", URL_KEY="suivi.dburl";
+  const urlInput=$("#dbUrl");
+  function dbUrl(){
+    let v=""; try{ v=localStorage.getItem(URL_KEY)||""; }catch(e){}
+    return (v||DATABASE_URL||"").trim().replace(/\/+$/,"");
+  }
+  const codeInput=$("#spaceCode"), stateEl=$("#shareState"), badge=$("#sync"), badgeLbl=$("#syncLabel");
+  let applying=false;
+
+  function setBadge(cls,label,detail){
+    badge.className=cls; badgeLbl.textContent=label;
+    if(detail!==undefined) stateEl.textContent=detail;
+  }
+
+  // identifiants déjà vus côté distant : permet de distinguer
+  // « supprimé par l'autre téléphone » de « pas encore envoyé »
+  const SEEN_KEY="suivi.seen";
+  let seen=new Set();
+  try{ seen=new Set(JSON.parse(localStorage.getItem(SEEN_KEY)||"[]")); }catch(e){}
+  function saveSeen(){
+    try{ localStorage.setItem(SEEN_KEY,JSON.stringify([...seen].slice(-4000))); }catch(e){}
+  }
+
+  function mergeList(localList, remoteList, kind){
+    const rIds=new Set(remoteList.map(x=>x.id));
+    remoteList.forEach(x=>seen.add(x.id));
+    const kept=[];
+    localList.forEach(x=>{
+      if(rIds.has(x.id)) return;              // présent des deux côtés : le distant fait foi
+      if(seen.has(x.id)) return;              // connu du distant puis retiré : suppression réelle
+      kept.push(x);                           // jamais parti : on le remonte
+      push(kind+"/"+x.id,x);
+    });
+    saveSeen();
+    return remoteList.concat(kept);
+  }
+
+
+  /* --- photos partagées : index léger dans l'espace, images à part --- */
+  // le code est lu du stockage : les images restent accessibles
+  // même si la connexion temps réel n'est pas établie
+  function currentCode(){
+    if(spaceCode) return spaceCode;
+    try{ return localStorage.getItem("suivi.space")||""; }catch(e){ return ""; }
+  }
+  function photoRestUrl(id){
+    let v=""; try{ v=localStorage.getItem("suivi.dburl")||""; }catch(e){}
+    const base=(v||DATABASE_URL||"").trim().replace(/\/+$/,"");
+    const code=currentCode();
+    if(!base||!code) return null;
+    return base+"/photos/"+code+"/"+id+".json";
+  }
+
+  function uploadPhoto(p){
+    const u=photoRestUrl(p.id);
+    if(!u) return;
+    push("photoIndex/"+p.id,p.ts);                    // index minuscule, temps réel
+    fetch(u,{method:"PUT",body:JSON.stringify(p.src)}).catch(()=>{});
+  }
+
+  /* file d'attente : une requête à la fois, la photo regardée passe devant */
+  let pQueue=[], pBusy=false, pDir=1, prefetchTimer=null;
+
+  const frugal=()=>{ const c=navigator.connection;
+    return !!(c && (c.saveData || /(^|-)2g$/.test(c.effectiveType||""))); };
+
+  function wantPhoto(i,front){
+    const p=photos[i];
+    if(!p || p.src) return;
+    pQueue=pQueue.filter(x=>x!==p.id);
+    front ? pQueue.unshift(p.id) : pQueue.push(p.id);
+    pump();
+  }
+
+  function pump(){
+    if(pBusy) return;
+    const id=pQueue.shift();
+    if(!id) return;
+    const p=photos.find(x=>x.id===id), u=photoRestUrl(id);
+    if(!p || p.src || !u) return pump();
+    pBusy=true;
+    fetch(u).then(r=>r.json()).then(src=>{
+      pBusy=false;
+      if(typeof src==="string"){
+        p.src=src; savePhotos(); renderIdent();
+        // rafraîchir l'affichage seulement si c'est la photo regardée
+        if($("#tm").classList.contains("open") && photos[tmIndex] && photos[tmIndex].id===id)
+          showPhoto(tmIndex,false);
+      }
+      pump();
+    }).catch(()=>{ pBusy=false; pump(); });
+  }
+
+  // voisines : dans le sens du déplacement d'abord, jamais en réseau contraint
+  function prefetchAround(i){
+    if(frugal()) return;
+    (pDir>=0 ? [i+1,i-1,i+2] : [i-1,i+1,i-2]).forEach(k=>wantPhoto(k,false));
+  }
+
+  const fetchPhoto=p=>wantPhoto(photos.indexOf(p),true);
+
+  // récupère d'abord la photo affichée, puis les autres au fil de l'eau
+  function syncPhotos(index){
+    if(!currentCode()) return;
+    const i=(typeof index==="number") ? index : photos.length-1;
+    wantPhoto(i,true);                                   // priorité absolue
+    clearTimeout(prefetchTimer);
+    prefetchTimer=setTimeout(()=>prefetchAround(i),350); // voisines une fois posé
+  }
+
+  function mergePhotoIndex(idx){
+    if(!idx) idx={};
+    let changed=false;
+    const known=new Set(photos.map(p=>p.id));
+    Object.keys(idx).forEach(id=>{
+      seen.add(id);
+      if(known.has(id)){
+        const p=photos.find(x=>x.id===id);
+        if(p && typeof idx[id]==="number" && p.ts!==idx[id]){ p.ts=idx[id]; changed=true; }
+      }else{
+        photos.push({id, ts:idx[id]||Date.now(), src:null}); changed=true;
+      }
+    });
+    // supprimée par l'autre téléphone : on retire la copie locale
+    const avant=photos.length;
+    photos=photos.filter(p=>idx[p.id] || !seen.has(p.id));
+    if(photos.length!==avant) changed=true;
+    // les nôtres que le distant ignore encore, jamais supprimées
+    photos.forEach(p=>{ if(p.src && !idx[p.id] && !seen.has(p.id)) uploadPhoto(p); });
+    saveSeen();
+    if(changed){
+      photos.sort((a,b)=>a.ts-b.ts);
+      savePhotos(); renderIdent();
+      if($("#tm").classList.contains("open")) renderTM();
+    }
+    syncPhotos();
+  }
+
+  function applyRemote(v){
+    applying=true;
+    const rEntries=Object.values(v.entries||{}).filter(Boolean).map(normalize);
+    const rTasks=Object.values(v.tasks||{}).filter(Boolean);
+    db.entries=mergeList(db.entries,rEntries,"entries").sort((a,b)=>a.ts-b.ts);
+    db.tasks=mergeList(db.tasks,rTasks,"tasks");
+    // un réglage absent du distant n'efface jamais le réglage local : on le remonte
+    const scal=(key,type)=>{
+      if(typeof v[key]===type) db[key]=v[key];
+      else if(db[key]!=null) push(key,db[key]);
+    };
+    scal("iv","number"); scal("ivAuto","boolean"); scal("ivCouche","number");
+    scal("ivTarget","number"); scal("birth","number"); scal("target","number");
+    scal("weight","number"); scal("appert","number"); scal("bottles","number");
+    mergePhotoIndex(v.photoIndex);
+    // on n'écrase jamais la note pendant la frappe
+    if(typeof v.note==="string" && document.activeElement!==nInput && v.note!==db.note){
+      db.note=v.note; nInput.value=v.note; counts();
+    }
+    saveLocal(); renderTab1(); renderTasks();
+    applying=false;
+    if(typeof checkDue==="function") checkDue();
+  }
+
+  function seedRemote(v){
+    // fusion à la première connexion : rien n'est perdu des deux côtés
+    const have=Object.keys(v.entries||{});
+    db.entries.forEach(e=>{ if(!have.includes(e.id)) push("entries/"+e.id,e); });
+    const haveT=Object.keys(v.tasks||{});
+    db.tasks.forEach(t=>{ if(!haveT.includes(t.id)) push("tasks/"+t.id,t); });
+    if(typeof v.note!=="string" && db.note) push("note",db.note);
+    if(typeof v.iv!=="number") push("iv",db.iv);
+    if(typeof v.ivAuto!=="boolean") push("ivAuto",db.ivAuto);
+    if(typeof v.ivCouche!=="number") push("ivCouche",db.ivCouche);
+    if(v.ivTarget==null&&db.ivTarget) push("ivTarget",db.ivTarget);
+    if(v.ivProfile==null&&db.ivProfile) push("ivProfile",db.ivProfile);
+    if(v.birth==null&&db.birth) push("birth",db.birth);
+    if(v.target==null&&db.target) push("target",db.target);
+    if(v.weight==null&&db.weight) push("weight",db.weight);
+    if(v.bottles==null&&db.bottles) push("bottles",db.bottles);
+    if(v.dose==null&&db.dose) push("dose",db.dose);
+  }
+
+  let connectTimer=null;
+  function connect(code){
+    const url=dbUrl();
+    setBadge("wait","Connexion…","Connexion à l'espace « "+code+" »…");
+    if(!url){ setBadge("","Local","Collez d'abord l'URL de votre base Realtime Database."); return; }
+    if(!window.firebase){ setBadge("err","Erreur","Le module de synchronisation n'a pas pu être chargé. Vérifiez la connexion."); return; }
+    try{
+      if(!firebase.apps.length) firebase.initializeApp({databaseURL:url});
+      if(remote) remote.off();
+      remote=firebase.database().ref("spaces/"+code);
+      spaceCode=code;
+      firebase.database().ref(".info/connected").on("value",s=>{
+        if(s.val()) setBadge("ok","Reliée","Synchronisé sur l'espace « "+code+" ».");
+        else setBadge("wait","Hors ligne","Hors réseau : vos saisies partiront dès le retour de la connexion.");
+      });
+      let first=true;
+      remote.on("value",snap=>{
+        const v=snap.val()||{};
+        if(first){ first=false; seedRemote(v); }
+        applyRemote(v);
+      });
+      try{ localStorage.setItem(SPACE_KEY,code); }catch(e){}
+      $("#spaceBtn").textContent="Délier";
+      clearTimeout(connectTimer);
+      connectTimer=setTimeout(()=>{
+        if(badge.className!=="ok")
+          setBadge("err","Bloquée","Aucune réponse du serveur après 10 s. Cause probable : les protections du navigateur bloquent la connexion temps réel. Essayez « Récupérer depuis le serveur » ci-dessous, ou ouvrez l'app dans Chrome.");
+      },10000);
+    }catch(e){ setBadge("err","Erreur",String(e.message||e)); }
+  }
+
+  function disconnect(){
+    if(remote){ try{remote.off();}catch(e){} }
+    remote=null; spaceCode="";
+    try{ localStorage.removeItem(SPACE_KEY); }catch(e){}
+    $("#spaceBtn").textContent="Relier";
+    setBadge("","Local","Synchronisation coupée. Les données restent sur ce téléphone.");
+  }
+
+  $("#spaceGen").addEventListener("click",()=>{
+    codeInput.value=Math.random().toString(36).slice(2,6)+"-"+Math.random().toString(36).slice(2,6);
+  });
+  $("#spaceBtn").addEventListener("click",()=>{
+    if(remote){ disconnect(); return; }
+    const u=urlInput.value.trim();
+    if(u && !/^https:\/\/[a-z0-9-]+.*(firebaseio\.com|firebasedatabase\.app)/i.test(u)){
+      stateEl.textContent="Cette URL ne ressemble pas à une adresse Realtime Database."; return;
+    }
+    try{ localStorage.setItem(URL_KEY,u); }catch(e){}
+    const c=codeInput.value.trim().toLowerCase().replace(/[^a-z0-9-]/g,"");
+    if(c.length<4){ stateEl.textContent="Choisissez un code d'au moins 4 caractères, identique sur les deux téléphones."; return; }
+    codeInput.value=c; connect(c);
+  });
+  badge.addEventListener("click",()=>{ tab(1); $("#share").scrollIntoView({block:"center"}); });
+
+  (function(){
+    let saved=""; try{ saved=localStorage.getItem(SPACE_KEY)||""; }catch(e){}
+    codeInput.value=saved;
+    try{ urlInput.value=localStorage.getItem(URL_KEY)||DATABASE_URL||""; }catch(e){}
+    if(saved && dbUrl()) connect(saved);
+    else setBadge("","Local", dbUrl()
+      ? "Choisissez un code et touchez Relier, puis saisissez le même code sur l'autre téléphone."
+      : "Aucune base configurée : l'app fonctionne sur ce téléphone uniquement.");
+  })();
+
+
+
+
+
+
+  /* ================= IDENTITÉ & TIME MACHINE ================= */
+  const PHOTOS_KEY="suivi.photos", RELANCE=14*864e5;
+  let photos=[];
+  try{ photos=JSON.parse(localStorage.getItem(PHOTOS_KEY)||"[]"); }catch(e){ photos=[]; }
+  // reprise de l'ancienne photo unique
+  try{
+    const old=localStorage.getItem("suivi.photo");
+    if(old && !photos.length){ photos=[{ts:Date.now(),src:old}]; savePhotos(); localStorage.removeItem("suivi.photo"); }
+  }catch(e){}
+  photos.forEach(p=>{ if(!p.id) p.id="p"+p.ts; });
+  function savePhotos(){
+    try{ localStorage.setItem(PHOTOS_KEY,JSON.stringify(photos)); return true; }
+    catch(e){ return false; }
+  }
+
+  function ageAt(ts){
+    if(!db.birth) return null;
+    const j=Math.max(0,Math.floor((sod(new Date(ts))-sod(new Date(db.birth)))/864e5));
+    return {j, sem:Math.floor(j/7), reste:j%7};
+  }
+  function ageBig(a){
+    if(!a) return "—";
+    return a.sem<1 ? a.j+(a.j>1?" jours":" jour") : a.sem+(a.sem>1?" semaines":" semaine");
+  }
+  function ageSmall(a){
+    if(!a) return "";
+    if(a.sem<1) return "";
+    return a.reste? "et "+a.reste+(a.reste>1?" jours":" jour") : "tout juste";
+  }
+
+  const photoDue=()=> !photos.length || (Date.now()-photos[photos.length-1].ts)>RELANCE;
+
+  function renderIdent(){
+    const img=$("#idImg"), box=$("#idPhoto");
+    let last=null;
+    for(let i=photos.length-1;i>=0;i--){ if(photos[i].src){ last=photos[i]; break; } }
+    if(!last && photos.length && typeof syncPhotos==="function") syncPhotos(photos.length-1);
+    // les deux photos précédentes, visibles en perspective sous la plus récente
+    const avec=photos.filter(p=>p.src);
+    [[2,"#idImg2",".ps2"],[3,"#idImg3",".ps3"]].forEach(([rang,imgSel,boxSel])=>{
+      const p=avec[avec.length-rang], el=$(imgSel), b=document.querySelector(boxSel);
+      if(p){ el.src=p.src; el.hidden=false; b.classList.add("filled"); }
+      else { el.hidden=true; el.removeAttribute("src"); b.classList.remove("filled"); }
+    });
+    if(last){ img.src=last.src; img.hidden=false; box.classList.add("filled"); $("#idFile").hidden=true; }
+    else { img.hidden=true; box.classList.remove("filled"); $("#idFile").hidden=false; }
+    $("#photoDue").hidden = !(photoDue() && photos.length);
+    const nu=$("#nudge");
+    if(photoDue()){
+      nu.hidden=false;
+      const a=ageAt(Date.now());
+      $("#nudgeTxt").textContent = photos.length
+        ? "📷 Nouvelle photo à ajouter"+(a?" — Alban a "+ageBig(a):"")
+        : "📷 Ajoutez une première photo d'Alban";
+    } else nu.hidden=true;
+
+    const age=$("#idAge");
+    if(!db.birth){
+      age.classList.add("empty");
+      $("#idBig").textContent="Ajouter sa date de naissance";
+      $("#idSmall").textContent="";
+      return;
+    }
+    age.classList.remove("empty");
+    const a=ageAt(Date.now());
+    $("#idBig").textContent=ageBig(a);
+    $("#idSmall").textContent=ageSmall(a);
+  }
+
+  /* --- date de naissance : sélecteur natif direct --- */
+  $("#idAge").addEventListener("click",()=>{
+    const el=$("#bDate");
+    if(db.birth){ const d=new Date(db.birth); el.value=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+    if(el.showPicker){ try{ el.showPicker(); return; }catch(e){} }
+    el.click();
+  });
+  $("#bDate").addEventListener("change",()=>{
+    const v=$("#bDate").value;
+    if(!v) return;
+    const [Y,M,D]=v.split("-").map(Number);
+    db.birth=new Date(Y,M-1,D).getTime();
+    saveLocal(); push("birth",db.birth); renderIdent(); renderTM();
+  });
+
+  /* --- ajout de photo (caméra ou galerie, natif) --- */
+  function handlePick(ev){
+    const f=ev.target.files&&ev.target.files[0];
+    ev.target.value="";
+    if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      const im=new Image();
+      im.onload=()=>{
+        const S=560, c=document.createElement("canvas");
+        c.width=S; c.height=S;
+        const g=c.getContext("2d");
+        const k=Math.max(S/im.width,S/im.height), w=im.width*k, h=im.height*k;
+        g.drawImage(im,(S-w)/2,(S-h)/2,w,h);
+        const np={id:"p"+Date.now(), ts:Date.now(), src:c.toDataURL("image/jpeg",.72)};
+        photos.push(np);
+        if(typeof uploadPhoto==="function") uploadPhoto(np);
+        photos.sort((a,b)=>a.ts-b.ts);
+        const ok=savePhotos();
+        tmIndex=photos.length-1;
+        renderIdent(); renderTM();
+        if(!ok) $("#tmNote").textContent="Mémoire du navigateur saturée : supprimez d'anciennes photos pour en ajouter.";
+      };
+      im.src=rd.result;
+    };
+    rd.readAsDataURL(f);
+  }
+  ["idFile","tmFile","nudgeFile"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.addEventListener("change",handlePick);
+  });
+
+  /* --- time machine --- */
+  let tmIndex=0;
+
+  $("#stack").addEventListener("click",ev=>{
+    if(!photos.length) return;            // l'input superposé ouvre le sélecteur
+    tmIndex=photos.length-1;
+    $("#tm").classList.add("open");
+    renderTM(true);
+  });
+  $("#tmBack").addEventListener("click",()=>$("#tm").classList.remove("open"));
+
+  const STEP=46;
+  let pos=0, dragging=false, animId=null, settleTimer=null;
+  const rAF=(f)=> (window.requestAnimationFrame||(g=>setTimeout(()=>g(Date.now()),16)))(f);
+  const cAF=(i)=>{ if(window.cancelAnimationFrame) window.cancelAnimationFrame(i); else clearTimeout(i); };
+  const nowMs=()=> (window.performance&&performance.now)?performance.now():Date.now();
+
+  function applyPos(){
+    const tr=$("#tmTrack");
+    if(tr) tr.style.transform="translateX("+(-(pos*STEP+STEP/2))+"px)";
+    const i=Math.round(pos);
+    $$("#tmRail .tick").forEach(t=>t.classList.toggle("on",+t.dataset.i===i));
+  }
+
+  let loadTimer=null;
+  function showPhoto(i,fetchNow){
+    const p=photos[i]; if(!p) return;
+    clearTimeout(loadTimer);
+    const a=ageAt(p.ts);
+    $("#tmAge").textContent = a? ageBig(a) : new Date(p.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long"});
+    $("#tmSub").textContent = (a? (ageSmall(a)? ageSmall(a)+" · ":"") : "")+
+      new Date(p.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+    const img=$("#tmImg"), frame=$("#tmFrame");
+    frame.classList.remove("loading");
+    if(p.src){
+      if(img.getAttribute("src")!==p.src){ img.src=p.src; }
+      img.style.opacity="1";
+    }else{
+      img.removeAttribute("src"); img.style.opacity="0";
+      // rien n'est demandé tant qu'on glisse : ni requête, ni voile
+      if(fetchNow && typeof syncPhotos==="function"){
+        loadTimer=setTimeout(()=>{ if(!photos[i]||!photos[i].src) frame.classList.add("loading"); },250);
+        syncPhotos(i);
+      }
+    }
+  }
+
+  function buildRail(){
+    const tr=$("#tmTrack");
+    if(tr.childElementCount===photos.length) return;
+    tr.innerHTML=photos.map((_,i)=>
+      '<div class="tick" data-i="'+i+'"><i></i><b></b><i></i></div>').join("");
+    $$("#tmRail .tick").forEach(t=>t.addEventListener("click",()=>{
+      if(dragging) return;
+      glideTo(+t.dataset.i);
+    }));
+  }
+
+  function glideTo(target,ms){
+    target=Math.max(0,Math.min(target,photos.length-1));
+    cAF(animId);
+    const from=pos, delta=target-from, t0=nowMs();
+    const dur=ms||Math.min(520,180+Math.abs(delta)*90);
+    (function step(now){
+      const k=Math.min(1,(now-t0)/dur);
+      const e=1-Math.pow(1-k,3);                  // décélération
+      pos=from+delta*e; applyPos();
+      const cur=Math.round(pos);
+      if(cur!==tmIndex){ pDir=cur>tmIndex?1:-1; tmIndex=cur; showPhoto(cur,false); }
+      if(k<1) animId=rAF(step);
+      else{ pos=target; tmIndex=target; applyPos(); showPhoto(target,true); }   // arrivée : on charge
+    })(nowMs());
+  }
+
+  function renderTM(goTo){
+    if(!photos.length){
+      $("#tmAge").textContent="Aucune photo";
+      $("#tmSub").textContent="";
+      $("#tmImg").removeAttribute("src");
+      $("#tmTrack").innerHTML="";
+      $("#tmNote").textContent="Ajoutez une première photo pour lancer la chronologie.";
+      return;
+    }
+    tmIndex=Math.max(0,Math.min(tmIndex,photos.length-1));
+    buildRail();
+    if(!dragging){ pos=tmIndex; applyPos(); }
+    showPhoto(tmIndex,true);
+
+    const jours=Math.floor((Date.now()-photos[photos.length-1].ts)/864e5);
+    $("#tmNote").textContent = photoDue()
+      ? "Dernière photo il y a "+jours+" jour"+(jours>1?"s":"")+" — c'est le moment d'en ajouter une."
+      : "Prochaine photo conseillée dans "+(14-jours)+" jour"+((14-jours)>1?"s":"")+".";
+  }
+
+  /* --- glissement aimanté --- */
+  (function(){
+    const rail=$("#tmRail");
+    let startX=0, startPos=0, lastX=0, lastT=0, vel=0, id=null;
+
+    rail.addEventListener("pointerdown",e=>{
+      if(!photos.length) return;
+      dragging=true; cAF(animId);
+      id=e.pointerId; rail.setPointerCapture(id);
+      startX=lastX=e.clientX; lastT=nowMs(); vel=0; startPos=pos;
+      rail.classList.add("grabbing");
+      clearTimeout(settleTimer);
+    });
+
+    rail.addEventListener("pointermove",e=>{
+      if(!dragging) return;
+      const now=nowMs(), dt=Math.max(1,now-lastT);
+      vel=(e.clientX-lastX)/dt;                   // px/ms
+      lastX=e.clientX; lastT=now;
+      pos=Math.max(-0.35,Math.min(photos.length-0.65, startPos-(e.clientX-startX)/STEP));
+      applyPos();
+      const cur=Math.round(pos);
+      if(cur!==tmIndex && photos[cur]){ pDir=cur>tmIndex?1:-1; tmIndex=cur; showPhoto(cur,false); }
+    });
+
+    function end(){
+      if(!dragging) return;
+      dragging=false; rail.classList.remove("grabbing");
+      try{ rail.releasePointerCapture(id); }catch(e){}
+      // élan : sous 0,25 px/ms on aimante simplement au plus proche
+      const flick = Math.abs(vel)<0.25 ? 0
+                  : Math.max(-3,Math.min(3,Math.round(-vel*1.2)));
+      glideTo(Math.round(pos)+flick);
+    }
+    rail.addEventListener("pointerup",end);
+    rail.addEventListener("pointercancel",end);
+    rail.addEventListener("lostpointercapture",end);
+  })();
+
+  /* --- supprimer une photo --- */
+  function deletePhoto(i){
+    const p=photos[i]; if(!p) return;
+    seen.add(p.id); saveSeen();                        // ne jamais la renvoyer
+    photos.splice(i,1); savePhotos();
+    if(typeof drop==="function") drop("photoIndex/"+p.id);
+    const u=photoRestUrl(p.id);
+    if(u) fetch(u,{method:"DELETE"}).catch(()=>{});
+    if(!photos.length){ $("#tm").classList.remove("open"); renderIdent(); return; }
+    tmIndex=Math.max(0,Math.min(i,photos.length-1));
+    pos=tmIndex;
+    renderIdent(); renderTM();
+  }
+
+  let trashArmed=null;
+  $("#tmTrash").addEventListener("click",()=>{
+    if(!photos.length) return;
+    const p=photos[tmIndex];
+    const quand=new Date(p.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+    let ok=null;
+    try{ ok=window.confirm("Supprimer la photo du "+quand+" ?\nElle reste dans la galerie du téléphone."); }
+    catch(e){ ok=null; }
+    if(ok===true){ clearTimeout(trashArmed); trashArmed=null; $("#tmNote").textContent=""; deletePhoto(tmIndex); return; }
+    if(ok===false) return;
+    // boîte native indisponible : confirmation en deux temps
+    if(trashArmed){ clearTimeout(trashArmed); trashArmed=null; deletePhoto(tmIndex); return; }
+    $("#tmNote").textContent="Touchez à nouveau la corbeille pour confirmer la suppression.";
+    trashArmed=setTimeout(()=>{ trashArmed=null; renderTM(); },4000);
+  });
+
+  /* --- dater une photo --- */
+  $("#tmDate").addEventListener("click",()=>{
+    if(!photos.length) return;
+    const p=photos[tmIndex], el=$("#pDate");
+    const d=new Date(p.ts);
+    el.value=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+    if(el.showPicker){ try{ el.showPicker(); return; }catch(e){} }
+    el.click();
+  });
+  $("#pDate").addEventListener("change",()=>{
+    const v=$("#pDate").value;
+    if(!v||!photos.length) return;
+    const p=photos[tmIndex];
+    const [Y,M,D]=v.split("-").map(Number);
+    const old=new Date(p.ts);
+    // on garde l'heure d'origine, seule la date change
+    p.ts=new Date(Y,M-1,D,old.getHours(),old.getMinutes(),old.getSeconds()).getTime();
+    photos.sort((a,b)=>a.ts-b.ts);
+    savePhotos();
+    if(typeof push==="function") push("photoIndex/"+p.id,p.ts);
+    tmIndex=Math.max(0,photos.findIndex(x=>x.id===p.id));
+    renderIdent(); renderTM(true);
+  });
+
+  /* ================= STATISTIQUES ================= */
+  let stRange=7, stMetric="ml", stSel=null;
+  const gran=()=> stRange<=31 ? "day" : (stRange<=120 ? "week" : "month");
+  const BAR_AREA=140, BASE=22;   // hauteur utile des barres, distance du socle
+
+  function dailyTotals(){
+    const map={}, cnt={}, dsum={}, dn={};
+    db.entries.forEach(e=>{
+      if(!e.kinds.includes("manger")) return;
+      const k=sod(new Date(e.ts));
+      const t=(e.meal&&e.meal.type)||"biberon";
+      map[k]=(map[k]||0)+((e.meal&&e.meal.ml)||0);
+      cnt[k]=(cnt[k]||0)+((t==="biberon"||t==="both")?1:0);
+      if(e.meal&&e.meal.dur){ dsum[k]=(dsum[k]||0)+e.meal.dur; dn[k]=(dn[k]||0)+1; }
+    });
+    return {ml:map,bot:cnt,dsum,dn};
+  }
+
+  function buckets(){
+    const D=dailyTotals();
+    delete D.ml[sod(new Date())]; delete D.bot[sod(new Date())];
+    delete D.dsum[sod(new Date())]; delete D.dn[sod(new Date())];
+    const dur = stMetric==="dur";
+    const daily = dur ? D.dsum : D.ml;
+    const bot   = dur ? D.dn   : D.bot;
+    const keys=Object.keys(daily).map(Number).sort((a,b)=>a-b);
+    if(!keys.length) return [];
+    const today=sod(new Date())-864e5, out=[];   // la journée en cours est exclue
+    if(gran()==="day"){
+      const from=Math.max(keys[0], today-(stRange-1)*864e5);
+      for(let t=from;t<=today;t+=864e5){
+        const d=new Date(t);
+        const vDay = dur ? (D.dn[t]? Math.round(D.dsum[t]/D.dn[t]/60) : 0) : (daily[t]||0);
+        out.push({key:t, val:vDay, bot:bot[t]||0, days:1,
+          lab:d.getDate()+"/"+pad(d.getMonth()+1),
+          full:d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})});
+      }
+    }else if(gran()==="week"){
+      const dow=(new Date(today).getDay()+6)%7, thisWeek=today-dow*864e5;
+      const first=sod(new Date(keys[0])), firstDow=(new Date(first).getDay()+6)%7;
+      let w=Math.max(first-firstDow*864e5, thisWeek-Math.ceil(stRange/7-1)*7*864e5);
+      for(; w<=thisWeek; w+=7*864e5){
+        let sum=0, n=0, nb=0;
+        for(let i=0;i<7;i++){
+          const t=w+i*864e5;
+          if(t>today) break;
+          if(daily[t]!=null){ sum+=daily[t]; }
+          nb+=bot[t]||0;
+          n++;
+        }
+        const d=new Date(w);
+        const vW = dur ? (nb? Math.round(sum/nb/60) : 0) : (n? Math.round(sum/n) : 0);
+        out.push({key:w, val:vW, bot:nb, days:n,
+          lab:d.getDate()+"/"+pad(d.getMonth()+1),
+          full:"Semaine du "+d.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})});
+      }
+    }else{
+      const start=new Date(keys[0]); start.setDate(1);
+      const cur=new Date(); cur.setDate(1);
+      let m=new Date(Math.max(start.getTime(), new Date(cur.getFullYear(),cur.getMonth()-Math.ceil(stRange/30-1),1).getTime()));
+      while(m<=cur){
+        const y=m.getFullYear(), mo=m.getMonth();
+        let sum=0, n=0, nb=0;
+        for(let d=1;d<=31;d++){
+          const t=new Date(y,mo,d).getTime();
+          if(new Date(t).getMonth()!==mo || t>today) break;
+          sum+=daily[t]||0; nb+=bot[t]||0; n++;
+        }
+        const vM = dur ? (nb? Math.round(sum/nb/60) : 0) : (n? Math.round(sum/n) : 0);
+        out.push({key:m.getTime(), val:vM, bot:nb, days:n,
+          lab:m.toLocaleDateString("fr-FR",{month:"short"}),
+          full:m.toLocaleDateString("fr-FR",{month:"long",year:"numeric"})});
+        m=new Date(y,mo+1,1);
+      }
+    }
+    return out;
+  }
+
+  function readout(b){
+    if(!b){ $("#stRead").innerHTML='<div class="sub">Touchez une barre pour le détail.</div>'; return; }
+    if(stMetric==="dur"){
+      $("#stRead").innerHTML=
+        '<div class="big mono">'+b.val+' min <span style="font-size:15px;color:var(--graphite)">· '+b.bot+' ⏱</span></div>'+
+        '<div class="sub">'+b.full+' · durée moyenne par biberon chronométré</div>';
+      return;
+    }
+    const t=db.target||0, d=t?b.val-t:null;
+    const unit=gran()==="day"?"":" en moyenne par jour";
+    const bt = gran()==="day" ? b.bot+" 🍼" : b.bot+" 🍼 sur la période";
+    $("#stRead").innerHTML=
+      '<div class="big mono">'+b.val+' ml <span style="font-size:15px;color:var(--graphite)">· '+bt+'</span></div>'+
+      '<div class="sub">'+b.full+unit+
+      (d===null?"":' · <span class="delta '+(d>=0?"up":"down")+'">'+(d>=0?"+":"")+d+' ml vs cible</span>')+
+      '</div>';
+  }
+
+
+  /* ---------- vue rythme : dispersion horaire ---------- */
+  function rhythmDays(){
+    const today=sod(new Date())-864e5, out=[];   // la journée en cours est exclue
+    const n=Math.min(stRange,60);
+    for(let i=0;i<n;i++){
+      const d0=today-i*864e5;
+      const items=db.entries.filter(e=>e.kinds.includes("manger") && e.ts>=d0 && e.ts<d0+864e5)
+                            .sort((a,b)=>a.ts-b.ts);
+      out.push({d0,items});
+    }
+    return out;
+  }
+
+  const RANK_COLORS=["#E8802B","#3B82C4","#2E8B94","#B45FA8","#5AA84F",
+                     "#D9534F","#8A7CD6","#C99A2E","#4B9FA6","#9C6B4A"];
+  const rankColor=i=>RANK_COLORS[i%RANK_COLORS.length];
+
+  function renderRhythm(){
+    const days=rhythmDays();               // du plus récent au plus ancien
+    const any=days.some(d=>d.items.length);
+    const host=$("#rRows");
+    if(!any){
+      host.innerHTML='<div id="rEmpty">Aucun repas enregistré sur la période.</div>';
+      $("#stRead").innerHTML='<div class="sub">Aucune donnée à afficher.</div>';
+      $("#stSum").innerHTML=""; $("#stNote").textContent="";
+      return;
+    }
+    const W=340, L=34, R=16, rowH=26, TOPM=4;
+    const plot=W-L-R, H=TOPM+days.length*rowH+4;
+    const x=h=>L+plot*h/24;
+    const y=i=>TOPM+i*rowH+rowH/2;
+    const hOf=ts=>{const d=new Date(ts);return d.getHours()+d.getMinutes()/60;};
+
+    let g="";
+    // nuit + repères
+    g+='<rect x="'+L+'" y="0" width="'+(x(NIGHT_END)-L)+'" height="'+H+'" fill="var(--sunk)"/>';
+    g+='<rect x="'+x(NIGHT_START)+'" y="0" width="'+(W-R-x(NIGHT_START))+'" height="'+H+'" fill="var(--sunk)"/>';
+    [6,12,18].forEach(h=>{ g+='<line x1="'+x(h)+'" y1="0" x2="'+x(h)+'" y2="'+H+'" stroke="var(--rule)" stroke-width="1" opacity=".55"/>'; });
+
+    // lignes de liaison : même rang de biberon d'un jour à l'autre
+    const maxRank=Math.max(...days.map(d=>d.items.length));
+    for(let k=0;k<maxRank;k++){
+      let seg=[];
+      days.forEach((d,i)=>{
+        if(d.items[k]) seg.push([x(hOf(d.items[k].ts)), y(i)]);
+        else { if(seg.length>1) g+=poly(seg,rankColor(k)); seg=[]; }
+      });
+      if(seg.length>1) g+=poly(seg,rankColor(k));
+    }
+
+    // points
+    days.forEach((d,i)=>{
+      d.items.forEach((e,k)=>{
+        const ml=(e.meal&&e.meal.ml)||0, r=Math.max(3.5,Math.min(6.5,3.5+ml/45));
+        const cx=x(hOf(e.ts)), cy=y(i), sel=stSel===e.id;
+        g+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy+'" r="'+(sel?r+2:r).toFixed(1)+'" fill="'+rankColor(k)+'"'+
+           (sel?' stroke="var(--ink)" stroke-width="1.5"':'')+'/>';
+        g+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy+'" r="10" fill="transparent" data-r="'+e.id+'" style="cursor:pointer"/>';
+      });
+      const lab=new Date(d.d0).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric"}).replace(".","");
+      g+='<text x="'+(L-6)+'" y="'+(y(i)+3)+'" text-anchor="end" font-size="9" fill="var(--graphite)">'+lab+'</text>';
+      if(d.items.length)
+        g+='<text x="'+(W-2)+'" y="'+(y(i)+3)+'" text-anchor="end" font-size="9" fill="var(--graphite)">'+d.items.length+'</text>';
+    });
+
+    host.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block">'+g+'</svg>';
+
+    host.querySelectorAll("[data-r]").forEach(el=>el.addEventListener("click",()=>{
+      stSel=el.dataset.r; renderRhythm();
+      const e=db.entries.find(x=>x.id===stSel);
+      if(e){
+        const d0=sod(new Date(e.ts));
+        const sameDay=db.entries.filter(z=>z.kinds.includes("manger")&&z.ts>=d0&&z.ts<d0+864e5).sort((a,b)=>a.ts-b.ts);
+        const rank=sameDay.findIndex(z=>z.id===e.id)+1;
+        $("#stRead").innerHTML=
+          '<div class="big mono">'+hm(e.ts)+' <span style="font-size:15px;color:var(--graphite)">· '+
+          ((e.meal&&e.meal.ml)||0)+' ml'+((e.meal&&e.meal.dur)?" · "+Math.max(1,Math.round(e.meal.dur/60))+" min":"")+'</span></div>'+
+          '<div class="sub">'+new Date(e.ts).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})+
+          ' · biberon n°'+rank+' de la journée</div>';
+      }
+    }));
+
+    // indicateurs
+    let gaps=[], firsts=[], counts=[];
+    days.forEach(d=>{
+      if(!d.items.length) return;
+      counts.push(d.items.length);
+      const h=t=>{const z=new Date(t);return z.getHours()+z.getMinutes()/60;};
+      firsts.push(h(d.items[0].ts));
+      for(let i=1;i<d.items.length;i++) gaps.push((d.items[i].ts-d.items[i-1].ts)/36e5);
+    });
+    const moy=a=>a.length?a.reduce((x2,y2)=>x2+y2,0)/a.length:0;
+    const asHour=v=>pad(Math.floor(v))+"h"+pad(Math.round((v%1)*60));
+    $("#stSum").innerHTML=
+      '<div class="scard"><div class="k">Prises / jour</div><div class="v mono">'+moy(counts).toFixed(1)+'</div></div>'+
+      '<div class="scard"><div class="k">Écart moyen</div><div class="v mono">'+(gaps.length?fmtIv(moy(gaps)):"—")+'</div></div>'+
+      '<div class="scard"><div class="k">1re prise</div><div class="v mono">'+(firsts.length?asHour(moy(firsts)):"—")+'</div></div>';
+    $("#stNote").textContent="Un point par biberon, à son heure de prise. Une couleur par rang dans la journée : les lignes suivent le même biberon d'un jour à l'autre et rendent visibles les glissements. Taille du point : quantité. Journée en cours exclue.";
+    if(!stSel || !db.entries.some(z=>z.id===stSel))
+      $("#stRead").innerHTML='<div class="sub">Touchez un point pour le détail.</div>';
+  }
+
+  function poly(pts,color){
+    return '<polyline points="'+pts.map(p=>p[0].toFixed(1)+","+p[1]).join(" ")+
+           '" fill="none" stroke="'+color+'" stroke-width="1.4" opacity=".45" stroke-linecap="round"/>';
+  }
+
+  function renderStats(){
+    $$("#stSeg button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.r===stRange));
+    $$("#stMetric button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===stMetric));
+    const rhythmView = stMetric==="rhythm";
+    $("#rhythm").hidden=!rhythmView;
+    $("#chartWrap").style.display=rhythmView?"none":"";
+    if(rhythmView){ renderRhythm(); return; }
+    const list=buckets(), target=(stMetric==="ml")?(db.target||0):0;
+    if(!list.length){
+      $("#bars").innerHTML=""; $("#stSum").innerHTML="";
+      $("#stRead").innerHTML='<div class="sub">'+(stMetric==="dur"
+        ? "Aucun biberon chronométré pour l'instant. Utilisez le minuteur dans la feuille Manger."
+        : "Aucune donnée de repas pour l'instant.")+'</div>';
+      $("#tline").style.display="none"; $("#stNote").textContent="";
+      return;
+    }
+    const max=Math.max(target, ...list.map(b=>b.val))*1.15 || 1;
+    const px=v=>Math.round(BAR_AREA*v/max);
+
+    $("#bars").innerHTML=list.map((b,i)=>
+      '<div class="bwrap'+(stSel===b.key?" hit":"")+'" data-b="'+b.key+'">'+
+      '<div class="bval">'+(b.val||"")+'</div>'+
+      '<div class="bbot">'+(b.bot? b.bot+(stMetric==="dur"?"⏱":"🍼") : "")+'</div>'+
+      '<div class="bar'+(b.val===0?" none":(target&&b.val>=target?" over":""))+'" style="height:'+Math.max(2,px(b.val))+'px"></div>'+
+      '<div class="blab">'+b.lab+'</div></div>').join("");
+
+    // ligne de cible
+    if(target){
+      $("#tline").style.display="";
+      $("#tline").style.bottom=(px(target)+BASE)+"px";
+      $("#tlab").textContent="cible "+target+" ml";
+    }else{
+      $("#tline").style.display="none";
+    }
+
+    const u = stMetric==="dur" ? " min" : " ml";
+    const vals=list.filter(b=>b.val>0).map(b=>b.val);
+    const moy=vals.length?Math.round(vals.reduce((a,c)=>a+c,0)/vals.length):0;
+    const best=vals.length?Math.max(...vals):0;
+    const atteint=target?list.filter(b=>b.val>=target).length:0;
+    const totalPrises=list.reduce((a,b)=>a+b.bot,0);
+    $("#stSum").innerHTML=
+      '<div class="scard"><div class="k">Moyenne</div><div class="v mono">'+moy+u+'</div></div>'+
+      '<div class="scard"><div class="k">'+(stMetric==="dur"?"Plus long":"Record")+'</div><div class="v mono">'+best+u+'</div></div>'+
+      (stMetric==="dur"
+        ? '<div class="scard"><div class="k">Chronométrés</div><div class="v mono">'+totalPrises+'</div></div>'
+        : (target?'<div class="scard"><div class="k">Cible atteinte</div><div class="v mono">'+atteint+'/'+list.length+'</div></div>':""));
+
+    $("#stNote").textContent = stMetric==="dur"
+      ? "Durée moyenne d'un biberon chronométré. Seules les prises enregistrées avec le minuteur apparaissent ici."
+      : (gran()==="day"
+        ? "Total bu par jour. La ligne rouge est la ration cible actuelle ("+(target||"non réglée")+(target?" ml":"")+")."
+        : "Moyenne quotidienne par "+(gran()==="week"?"semaine":"mois")+", comparable à la cible journalière. Les jours sans entrée comptent pour zéro.");
+
+    $$("#bars .bwrap").forEach(w=>w.addEventListener("click",()=>{
+      stSel=+w.dataset.b;
+      readout(list.find(b=>b.key===stSel));
+      $$("#bars .bwrap").forEach(x=>x.classList.toggle("hit",+x.dataset.b===stSel));
+    }));
+
+    const last=list[list.length-1];
+    if(stSel==null || !list.some(b=>b.key===stSel)) { stSel=last.key; $$("#bars .bwrap").forEach(x=>x.classList.toggle("hit",+x.dataset.b===stSel)); }
+    readout(list.find(b=>b.key===stSel));
+    setTimeout(()=>{ $("#chart").scrollLeft=$("#chart").scrollWidth; },0);
+  }
+
+  $("#statsOpen").addEventListener("click",()=>{ stSel=null; $("#stats").classList.add("open"); renderStats(); });
+  $("#stBack").addEventListener("click",()=>$("#stats").classList.remove("open"));
+  $$("#stSeg button").forEach(b=>b.addEventListener("click",()=>{
+    stRange=+b.dataset.r; stSel=null; renderStats();
+  }));
+  $$("#stMetric button").forEach(b=>b.addEventListener("click",()=>{
+    stMetric=b.dataset.m; stSel=null; renderStats();
+  }));
+
+
+  /* ================= CONSEIL NUTRITION ================= */
+  const TIP_KEY="suivi.tip";
+  let tipOpen=true;
+  try{ tipOpen=localStorage.getItem(TIP_KEY)!=="0"; }catch(e){}
+  const r5=v=>Math.round(v/5)*5;
+  const clampDose=v=>Math.max(60,Math.min(150,r5(v)));
+
+  function mealsToday(){
+    const t0=sod(new Date()), t1=t0+864e5, out=[];
+    db.entries.forEach(e=>{
+      if(!e.kinds.includes("manger")) return;
+      if(e.ts<t0||e.ts>=t1) return;
+      const t=(e.meal&&e.meal.type)||"biberon";
+      if(t==="sein") return;
+      out.push({ts:e.ts, ml:(e.meal&&e.meal.ml)||0});
+    });
+    return out.sort((a,b)=>a.ts-b.ts);
+  }
+
+  // biberons théoriquement dus depuis minuit
+  function expectedByNow(){
+    const now=new Date(), h=now.getHours()+now.getMinutes()/60;
+    return (db.bottles||0)*h/24;
+  }
+
+  // moyenne des biberons par jour sur les 7 journées complètes précédentes
+  function weekStats(){
+    const D=dailyTotals(), today=sod(new Date());
+    let days=0, bots=0, ml=0;
+    for(let i=1;i<=7;i++){
+      const t=today-i*864e5;
+      if(D.bot[t]==null && D.ml[t]==null) continue;
+      days++; bots+=D.bot[t]||0; ml+=D.ml[t]||0;
+    }
+    return days? {days, perDay:bots/days, mlDay:ml/days, dose:bots?ml/bots:0} : null;
+  }
+
+  function buildAdvice(){
+    const T=db.target||0, N=db.bottles||0;
+    if(!T||!N) return null;
+    const list=mealsToday();
+    const dose=doseParBiberon()||r5(T/N);
+    const now=Date.now(), h=new Date().getHours()+new Date().getMinutes()/60;
+    const C=list.reduce((a,m)=>a+m.ml,0), B=list.length;
+    const reste=T-C, resteBib=N-B;
+    const last=list.length?list[list.length-1]:null;
+    const ivCible=mealIv(now);
+
+    // écart moyen des 3 dernières prises
+    let gap=null;
+    if(list.length>=2){
+      const tail=list.slice(-4), gaps=[];
+      for(let i=1;i<tail.length;i++) gaps.push((tail[i].ts-tail[i-1].ts)/36e5);
+      gap=gaps.reduce((a,c)=>a+c,0)/gaps.length;
+    }
+    const doseMoy = B? C/B : dose;
+    const heuresRestantes=Math.max(0,24-h);
+
+    /* --- 1. quota de biberons déjà atteint, journée pas finie --- */
+    if(B>=2 && resteBib<=0 && heuresRestantes>1.5){
+      const projB=B+(gap?Math.floor(heuresRestantes/Math.max(gap,2)):0);
+      let k=Math.max(1,Math.round(heuresRestantes/Math.max(ivCible*1.25,2.5)));
+      if(reste>0){
+        let d=clampDose(reste/k);
+        while(k>1 && reste/k<60){ k--; d=clampDose(reste/k); }
+        return {
+          head:"Cible presque atteinte",
+          text:"Il reste <b>"+Math.max(0,reste)+" ml</b> avant minuit et Alban a déjà pris ses "+N+" biberons. Prévoyez <b>"+(k>1?k+" prises":"une prise")+" de "+d+" ml</b>"+(k>1?", espacées d'environ "+fmtIv(heuresRestantes/k):"")+".",
+          why:"Des prises plus grosses et plus espacées tiennent mieux que plusieurs petites : le dépassement resterait proche de "+Math.max(0,(C+k*d)-T)+" ml au lieu d'environ "+Math.max(0,(C+(projB-B)*Math.round(doseMoy))-T)+" ml."
+        };
+      }
+      return {
+        head:"Cible atteinte",
+        text:"Alban est à <b>"+C+" ml</b> pour une cible de "+T+" ml. Si une prise s'impose, une <b>petite dose de 60 à 70 ml</b> suffit.",
+        why:"Le compteur repart à zéro à minuit, l'objectif de la journée est rempli."
+      };
+    }
+
+    /* --- 2. rythme trop rapide : il finira au-dessus --- */
+    if(B>=2 && gap && resteBib>0){
+      const ivRequis=heuresRestantes/resteBib;          // écart nécessaire pour tenir en N biberons
+      const projB=B+Math.floor(heuresRestantes/Math.max(gap,1.5));
+      const projMl=Math.round(C+(projB-B)*doseMoy);
+      if(gap < ivRequis*0.85 || projB>N+0.4){
+        const facteur=Math.min(1.5, ivRequis/Math.max(gap,1));
+        let next=clampDose(doseMoy*facteur), apres=null;
+        if(resteBib>1){
+          apres=clampDose((reste-next)/(resteBib-1));
+          // on n'écrase pas les biberons suivants : on rabote la hausse si besoin
+          while(apres<65 && next>doseMoy+5){
+            next=clampDose(next-5);
+            apres=clampDose((reste-next)/(resteBib-1));
+          }
+          if(next<=doseMoy+5) return null;
+        }
+        const nextT=(last?last.ts:now)+Math.min(5,Math.max(2,gap*facteur))*36e5;
+        return {
+          head:"Rythme un peu rapide",
+          text:"Alban boit toutes les <b>"+fmtIv(gap)+"</b> au lieu de "+fmtIv(ivRequis)+". Proposez <b>"+next+" ml</b> au prochain, vers <b>"+hm(nextT)+"</b>"+
+               (apres? ", puis "+apres+" ml sur les "+(resteBib-1)+" suivants." : "."),
+          why:"Un biberon plus rempli le cale plus longtemps : la journée finit sur "+N+" biberons et "+T+" ml, au lieu d'environ "+projB+" biberons et "+projMl+" ml."
+        };
+      }
+    }
+
+    /* --- 3. tendance de la semaine --- */
+    const w=weekStats();
+    if(w && w.days>=3 && w.perDay>N+0.4 && w.dose){
+      const cible=r5(T/N);
+      if(cible>w.dose+5) return {
+        head:"Tendance de la semaine",
+        text:"Sur "+w.days+" jours, Alban prend <b>"+w.perDay.toFixed(1)+" biberons</b> par jour pour "+N+" visés, avec des doses de "+Math.round(w.dose)+" ml en moyenne. Visez <b>"+cible+" ml</b> par biberon.",
+        why:"Remplir davantage chaque biberon supprime la prise en trop sans changer la quantité totale de la journée."
+      };
+    }
+    return null;
+  }
+
+  function renderTip(){
+    const a=buildAdvice(), el=$("#tip");
+    if(!a){ el.hidden=true; return; }
+    el.hidden=false;
+    el.classList.toggle("open",tipOpen);
+    $("#tipHead").textContent=a.head;
+    $("#tipText").innerHTML=a.text;
+    $("#tipWhy").innerHTML=a.why;
+  }
+
+  $("#tipBar").addEventListener("click",()=>{
+    tipOpen=!tipOpen;
+    try{ localStorage.setItem(TIP_KEY,tipOpen?"1":"0"); }catch(e){}
+    $("#tip").classList.toggle("open",tipOpen);
+  });
+
+  /* ================= JAUGE DE LAIT ================= */
+  const appert=(w,c)=>Math.round((w/10+c)/5)*5;
+
+  function todayMeals(){
+    const t0=sod(new Date()), t1=t0+864e5;
+    const r={ml:0,bottles:0,day:{ml:0,bottles:0},night:{ml:0,bottles:0}};
+    db.entries.forEach(e=>{
+      if(!e.kinds.includes("manger")) return;
+      if(e.ts<t0||e.ts>=t1) return;
+      const type=(e.meal&&e.meal.type)||"biberon";
+      const ml=(e.meal&&e.meal.ml)||0;
+      const b=(type==="biberon"||type==="both")?1:0;
+      const slot=isNight(e.ts)?r.night:r.day;
+      r.ml+=ml; r.bottles+=b; slot.ml+=ml; slot.bottles+=b;
+    });
+    return r;
+  }
+
+
+  const doseTheorique=()=>(db.target&&db.bottles)?Math.round(db.target/db.bottles/5)*5:null;
+  const doseParBiberon=()=>(db.dose>0?db.dose:doseTheorique());
+
+
+  /* bascule automatique jour / nuit */
+  function applyTheme(){
+    const nuit=isNight(Date.now());
+    if(document.body.classList.contains("dark")===nuit) return;
+    document.body.classList.toggle("dark",nuit);
+    const m=document.querySelector('meta[name="theme-color"]');
+    if(m) m.setAttribute("content", nuit ? "#12171D" : "#E4E7EA");
+  }
+
+  function renderGauge(){
+    const gr=todayMeals(), done=gr.ml, bottles=gr.bottles, target=db.target||0;
+    $("#gCount").innerHTML = bottles+"<span>/"+(db.bottles||"–")+" 🍼</span>";
+    applyTheme();
+    const nuit=isNight(Date.now());
+    $("#gauge").classList.toggle("night",nuit);
+    $("#gPhase").textContent = nuit ? "🌙 Nuit" : "Jour";
+
+    const dose=doseParBiberon();
+    $("#gDose").innerHTML = dose ? "Dose repère : <b>"+dose+" ml</b> par biberon" : "";
+    $("#gDone").textContent=done;
+    $("#gTarget").textContent = target? "/ "+target+" ml" : "ml";
+    const pct = target? Math.min(100, Math.round(done/target*100)) : 0;
+    $("#gFill").style.width=pct+"%";
+    $("#gauge").classList.toggle("over", target>0 && done>target);
+    if(!target){
+      $("#gNote").textContent="Touchez pour définir la ration journalière.";
+    }else if(done>target){
+      $("#gNote").textContent=(done-target)+" ml au-dessus de l'objectif.";
+    }else{
+      $("#gNote").textContent=(target-done)+" ml restants · "+pct+" %";
+    }
+  }
+
+  let doseTouched=false;
+  function paintDose(){
+    const t=parseInt($("#tTarget").value,10), n=parseInt($("#tBottles").value,10);
+    if(isNaN(t)||isNaN(n)||n<=0){
+      $("#tDose").textContent="Saisissez un objectif et un nombre de biberons pour obtenir la dose.";
+      $("#tDoseAuto").setAttribute("aria-pressed",!doseTouched);
+      return;
+    }
+    const theo=Math.round(t/n/5)*5;
+    if(!doseTouched) $("#tDoseInput").value=theo;
+    const man=parseInt($("#tDoseInput").value,10);
+    const eff=(!isNaN(man)&&man>0)?man:theo;
+    $("#tDoseAuto").setAttribute("aria-pressed", eff===theo && !doseTouched);
+    const total=eff*n;
+    $("#tDose").innerHTML=
+      t+" ml ÷ "+n+" = <b>"+theo+" ml</b> par biberon"+
+      (eff!==theo ? " · réglage manuel : <b>"+eff+" ml</b>, soit "+total+" ml sur "+n+" biberons" : "")+
+      "<br>Intervalle : 24 h ÷ "+n+" = <b>"+fmtIv(24/n)+"</b>"+
+      (Array.isArray(db.ivProfile)&&db.ivProfile.length ? " · rythme observé en vigueur"
+        : (db.ivTarget>0 ? " · cible observée : <b>"+fmtIv(db.ivTarget)+"</b>" : ""))+
+      (eff>240? "<br>Dose élevée, mieux vaut répartir sur davantage de biberons." : "");
+  }
+
+  function paintCalc(){
+    const w=parseInt($("#tWeight").value,10);
+    $$("#tConst button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.k===db.appert));
+    if(isNaN(w)||w<=0){ $("#tCalc").textContent="Saisissez le poids pour appliquer la règle d'Appert."; return; }
+    const v=appert(w,db.appert);
+    $("#tCalc").innerHTML="Règle d'Appert : "+w+" ÷ 10 + "+db.appert+" = <b>"+v+" ml</b> par jour"+
+      (w>6000? " — au-delà de 6 kg, la règle n'est plus adaptée." : "");
+    $("#tTarget").value=v;
+    paintDose();
+  }
+
+
+  /* ---------- analyse du rythme réel ---------- */
+  let pendingIv=null;
+
+  const median=a=>{ const x=a.slice().sort((m,n)=>m-n);
+    return x.length%2 ? x[(x.length-1)/2] : (x[x.length/2-1]+x[x.length/2])/2; };
+  const r5min=h=>Math.round(h*12)/12;
+
+  function analyzeRhythm(days){
+    const today=sod(new Date());
+    const parRang={}, tous=[], perDay=[];
+    // une journée de plus en mémoire pour mesurer l'écart de nuit du dernier jour
+    const jour=i=>{
+      const d0=today-i*864e5;
+      return db.entries.filter(e=>e.kinds.includes("manger")&&e.ts>=d0&&e.ts<d0+864e5)
+                       .sort((a,b)=>a.ts-b.ts);
+    };
+    for(let i=days;i>=1;i--){
+      const list=jour(i);
+      if(!list.length) continue;
+      perDay.push(list.length);
+      const suiv=jour(i-1);
+      for(let k=0;k<list.length;k++){
+        const apres = (k<list.length-1) ? list[k+1] : (suiv[0]||null);   // dernier → 1er du lendemain
+        if(!apres) continue;
+        const g=(apres.ts-list[k].ts)/36e5;
+        if(g<0.5||g>10) continue;        // doublons et trous de saisie écartés
+        (parRang[k]=parRang[k]||[]).push(g);
+        tous.push(g);
+      }
+    }
+    if(tous.length<5) return null;
+    const global=r5min(median(tous));
+    const rangs=Object.keys(parRang).map(Number).sort((a,b)=>a-b);
+    const maxRang=rangs.length?rangs[rangs.length-1]:0;
+    const profile=[];
+    for(let k=0;k<=maxRang;k++){
+      const ech=parRang[k]||[];
+      // sous deux observations, on retombe sur la médiane globale
+      profile.push(ech.length>=2 ? r5min(median(ech)) : global);
+    }
+    return {profile, global, n:tous.length, jours:perDay.length,
+            echantillons:profile.map((_,k)=>(parRang[k]||[]).length),
+            parJour:perDay.reduce((a,c)=>a+c,0)/perDay.length};
+  }
+
+  function paintAnalysis(res){
+    const box=$("#tAnalysis");
+    if(res===undefined){
+      const prof=Array.isArray(db.ivProfile)?db.ivProfile:null;
+      box.innerHTML = prof
+        ? "Rythme observé en vigueur : "+prof.map(g=>fmtIv(g)).join(" · ")+
+          ". <button id='tUndo'>Revenir au calcul automatique</button>"
+        : (db.ivTarget>0
+          ? "Intervalle cible actuel : <b>"+fmtIv(db.ivTarget)+"</b>, issu de l'observation. <button id='tUndo'>Revenir au calcul automatique</button>"
+          : "");
+    }else if(!res){
+      box.innerHTML="Pas assez de repas enregistrés sur les 5 derniers jours pour dégager un rythme.";
+    }else{
+      pendingIv=res;
+      const lignes=res.profile.map((g,k)=>
+        '<div class="ivrow"><span>'+(k===res.profile.length-1
+            ? "dernier → 1<sup>er</sup> du lendemain"
+            : (k+1)+'<sup>'+(k?"e":"er")+'</sup> → '+(k+2)+'<sup>e</sup>')+'</span>'+
+        '<b>'+fmtIv(g)+'</b><i>'+(res.echantillons[k]||0)+' obs.</i></div>').join("");
+      box.innerHTML="Sur "+res.jours+" jour"+(res.jours>1?"s":"")+", "+res.parJour.toFixed(1)+
+        " biberons par jour ("+res.n+" intervalles mesurés). Écart observé après chaque biberon :"+
+        '<div class="ivtab">'+lignes+'</div>'+
+        "Médiane toutes prises confondues : <b>"+fmtIv(res.global)+"</b>, contre "+
+        (db.bottles?fmtIv(24/db.bottles):"—")+" en théorique."+
+        "<button id='tApply'>Adopter ce rythme</button>";
+    }
+    const ap=$("#tApply"); if(ap) ap.addEventListener("click",()=>{
+      db.ivProfile=pendingIv.profile.slice();
+      db.ivTarget=pendingIv.global;
+      saveLocal(); push("ivProfile",db.ivProfile); push("ivTarget",db.ivTarget);
+      paintAnalysis(); paintDose(); renderTab1();
+    });
+    const un=$("#tUndo"); if(un) un.addEventListener("click",()=>{
+      db.ivTarget=null; db.ivProfile=null;
+      saveLocal(); push("ivTarget",null); push("ivProfile",null);
+      paintAnalysis(); paintDose(); renderTab1();
+    });
+  }
+
+  $("#tAnalyze").addEventListener("click",()=>paintAnalysis(analyzeRhythm(5)));
+
+  function openTarget(){
+    $("#tWeight").value = db.weight||"";
+    $("#tTarget").value = db.target||"";
+    $$("#tConst button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.k===db.appert));
+    $("#tBottles").value = db.bottles||"";
+    doseTouched = db.dose>0;
+    $("#tDoseInput").value = db.dose>0 ? db.dose : "";
+    pendingIv=null; paintAnalysis();
+    if(db.weight) paintCalc(); else $("#tCalc").textContent="Saisissez le poids pour appliquer la règle d'Appert.";
+    $("#tTarget").value = db.target||"";
+    paintDose();
+    $("#tsheet").classList.add("open");
+  }
+
+  $("#gauge").addEventListener("click",openTarget);
+  $("#tWeight").addEventListener("input",paintCalc);
+  $("#tBottles").addEventListener("input",paintDose);
+  $("#tDoseInput").addEventListener("input",()=>{ doseTouched=true; paintDose(); });
+  $("#tDoseAuto").addEventListener("click",()=>{ doseTouched=false; $("#tDoseInput").value=""; paintDose(); });
+  $("#tTarget").addEventListener("input",paintDose);
+  $$("#tConst button").forEach(b=>b.addEventListener("click",()=>{
+    db.appert=+b.dataset.k; paintCalc();
+  }));
+  $("#tClose").addEventListener("click",()=>$("#tsheet").classList.remove("open"));
+  $("#tsheet").addEventListener("click",ev=>{ if(ev.target===$("#tsheet")) $("#tsheet").classList.remove("open"); });
+  $("#tSave").addEventListener("click",()=>{
+    const w=parseInt($("#tWeight").value,10), t=parseInt($("#tTarget").value,10),
+          n=parseInt($("#tBottles").value,10);
+    db.weight=isNaN(w)?null:w;
+    db.target=isNaN(t)?null:t;
+    db.bottles=(isNaN(n)||n<=0)?null:n;
+    const dm=parseInt($("#tDoseInput").value,10);
+    const theo=(db.target&&db.bottles)?Math.round(db.target/db.bottles/5)*5:null;
+    db.dose=(doseTouched && !isNaN(dm) && dm>0 && dm!==theo) ? dm : null;
+    saveLocal(); push("weight",db.weight); push("target",db.target);
+    push("appert",db.appert); push("bottles",db.bottles); push("dose",db.dose);
+    $("#tsheet").classList.remove("open");
+    renderTab1();
+  });
+
+  /* ================= RAPPEL CALENDRIER ================= */
+  function icsStamp(ts){
+    const d=new Date(ts);
+    return d.getUTCFullYear()+pad(d.getUTCMonth()+1)+pad(d.getUTCDate())+"T"+
+           pad(d.getUTCHours())+pad(d.getUTCMinutes())+"00Z";
+  }
+
+  function calendarUrl(t){
+    const start=icsStamp(t.due), end=icsStamp(t.due+15*6e4);
+    return "https://calendar.google.com/calendar/render?action=TEMPLATE"+
+           "&text="+encodeURIComponent(t.label)+
+           "&dates="+start+"/"+end+
+           (t.repeat?"&recur="+encodeURIComponent("RRULE:FREQ=DAILY"):"")+
+           "&details="+encodeURIComponent("Rappel créé depuis Suivi");
+  }
+
+  function icsFile(t){
+    const lines=[
+      "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Suivi//FR","CALSCALE:GREGORIAN",
+      "BEGIN:VEVENT",
+      "UID:"+t.id+"@suivi",
+      "DTSTAMP:"+icsStamp(Date.now()),
+      "DTSTART:"+icsStamp(t.due),
+      "DTEND:"+icsStamp(t.due+15*6e4),
+      "SUMMARY:"+t.label.replace(/[\n,;]/g," "),
+      t.repeat?"RRULE:FREQ=DAILY":null,
+      "BEGIN:VALARM","TRIGGER:PT0M","ACTION:DISPLAY",
+      "DESCRIPTION:"+t.label.replace(/[\n,;]/g," "),
+      "END:VALARM","END:VEVENT","END:VCALENDAR"
+    ].filter(Boolean).join("\r\n");
+    const url=URL.createObjectURL(new Blob([lines],{type:"text/calendar"}));
+    const a=document.createElement("a");
+    a.href=url; a.download=t.label.replace(/[^\w -]/g,"").slice(0,30)+".ics"; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+  }
+
+  function addToCalendar(t){
+    if(!t) return;
+    window.open(calendarUrl(t),"_blank","noopener");
+  }
+
+
+  /* ================= SAUVEGARDE / RESTAURATION ================= */
+  function mergeInto(data){
+    if(!data||typeof data!=="object") return 0;
+    let added=0;
+    const ids=new Set(db.entries.map(e=>e.id));
+    (data.entries||[]).forEach(e=>{
+      if(!e||!e.id||ids.has(e.id)) return;
+      db.entries.push(normalize(e)); ids.add(e.id); push("entries/"+e.id,normalize(e)); added++;
+    });
+    const tids=new Set(db.tasks.map(t=>t.id));
+    (data.tasks||[]).forEach(t=>{
+      if(!t||!t.id||tids.has(t.id)) return;
+      db.tasks.push(t); tids.add(t.id); push("tasks/"+t.id,t); added++;
+    });
+    ["target","weight","appert","bottles","birth","ivCouche","ivTarget"].forEach(k=>{
+      if(db[k]==null && data[k]!=null){ db[k]=data[k]; push(k,data[k]); }
+    });
+    if(!db.note && data.note){ db.note=data.note; push("note",data.note); }
+    db.entries.sort((a,b)=>a.ts-b.ts);
+    saveLocal(); renderTab1(); renderTasks();
+    return added;
+  }
+
+  $("#bkPull").addEventListener("click",()=>{
+    const url=(function(){ let v=""; try{ v=localStorage.getItem("suivi.dburl")||""; }catch(e){} return (v||DATABASE_URL||"").trim().replace(/\/+$/,""); })();
+    const code=$("#spaceCode").value.trim().toLowerCase().replace(/[^a-z0-9-]/g,"");
+    if(!url||code.length<4){ $("#bkState").textContent="Renseignez l'adresse et le code au-dessus."; return; }
+    $("#bkState").textContent="Lecture du serveur…";
+    fetch(url+"/spaces/"+code+".json")
+      .then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+      .then(v=>{
+        if(!v){ $("#bkState").textContent="L'espace « "+code+" » est vide sur le serveur."; return; }
+        const data={
+          entries:Object.values(v.entries||{}).filter(Boolean),
+          tasks:Object.values(v.tasks||{}).filter(Boolean),
+          note:v.note, target:v.target, weight:v.weight, appert:v.appert,
+          bottles:v.bottles, birth:v.birth, ivCouche:v.ivCouche, ivTarget:v.ivTarget
+        };
+        const n=mergeInto(data);
+        $("#bkState").textContent = n? n+" éléments récupérés depuis le serveur."
+                                     : "Rien de nouveau : l'app a déjà tout ce que contient le serveur.";
+      })
+      .catch(e=>{ $("#bkState").textContent="Échec de la lecture : "+e.message+". Vérifiez le code, ou essayez dans Chrome."; });
+  });
+
+  $("#bkExport").addEventListener("click",()=>{
+    const url=URL.createObjectURL(new Blob([JSON.stringify(db)],{type:"application/json"}));
+    const a=document.createElement("a");
+    a.href=url; a.download="suivi-"+new Date().toISOString().slice(0,10)+".json"; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    $("#bkState").textContent=db.entries.length+" entrées exportées.";
+  });
+
+  $("#bkFile").addEventListener("change",ev=>{
+    const f=ev.target.files&&ev.target.files[0]; ev.target.value="";
+    if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      try{
+        const n=mergeInto(JSON.parse(rd.result));
+        $("#bkState").textContent = n? n+" éléments restaurés." : "Rien de nouveau à restaurer.";
+      }catch(e){ $("#bkState").textContent="Fichier illisible."; }
+    };
+    rd.readAsText(f);
+  });
+
+  $("#bkRestore").addEventListener("click",()=>{
+    let bak=null;
+    try{ bak=JSON.parse(localStorage.getItem(BAK_KEY)||"null"); }catch(e){}
+    if(!bak){ $("#bkState").textContent="Aucune sauvegarde locale sur cet appareil."; return; }
+    const n=mergeInto(bak);
+    $("#bkState").textContent = n? n+" éléments récupérés depuis la sauvegarde locale."
+                                 : "La sauvegarde locale ne contient rien de plus que l'app.";
+  });
+
+  /* ================= RAPPELS ================= */
+  const notifBtn=$("#notifBtn"), notifState=$("#notifState");
+  const FIRED_KEY="suivi.fired";
+  let fired={};
+  try{ fired=JSON.parse(localStorage.getItem(FIRED_KEY)||"{}"); }catch(e){}
+  const markFired=id=>{ fired[id]=Date.now(); try{ localStorage.setItem(FIRED_KEY,JSON.stringify(fired)); }catch(e){} };
+
+  const notifSupported = ("Notification" in window);
+
+  function notifPaint(){
+    if(!notifSupported){
+      notifBtn.style.display="none";
+      notifState.textContent="Ce navigateur ne gère pas les notifications.";
+      return;
+    }
+    const p=Notification.permission;
+    notifBtn.classList.toggle("on",p==="granted");
+    notifBtn.textContent = p==="granted" ? "Rappels actifs" : "Activer les rappels";
+    notifState.textContent = p==="granted"
+      ? "Alerte à l'heure exacte, uniquement si l'app est ouverte. Pour un rappel fiable téléphone verrouillé, utilisez le bouton Rappel de chaque tâche."
+      : p==="denied"
+        ? "Notifications refusées. Réautorisez-les dans les réglages du site, puis rouvrez l'app."
+        : "Filet de sécurité quand l'app est ouverte. Le rappel fiable passe par le calendrier (bouton Rappel sur chaque tâche).";
+  }
+
+  notifBtn.addEventListener("click",()=>{
+    if(!notifSupported) return;
+    Notification.requestPermission().then(()=>{ notifPaint(); checkDue(); });
+  });
+
+  function fire(t){
+    markFired(t.id);
+    try{
+      const n=new Notification(t.label,{
+        body:"Prévu à "+hm(t.due),
+        tag:"suivi-"+t.id,
+        icon:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23182028'/><circle cx='50' cy='50' r='26' fill='%23FF5B3D'/></svg>"
+      });
+      n.onclick=()=>{ window.focus(); tab(2); n.close(); };
+    }catch(e){}
+    if(navigator.vibrate) navigator.vibrate([120,60,120]);
+  }
+
+  function checkDue(){
+    if(!notifSupported || Notification.permission!=="granted") return;
+    const now=Date.now();
+    db.tasks.forEach(t=>{
+      if(t.done || fired[t.id]) return;
+      // uniquement à l'instant T : fenêtre de 90 s, pas de rattrapage des heures passées
+      if(t.due<=now && now-t.due<90000) fire(t);
+    });
+    // purge des marqueurs de plus de 3 jours
+    const cut=now-3*864e5, keys=Object.keys(fired);
+    if(keys.length>60) keys.forEach(k=>{ if(fired[k]<cut) delete fired[k]; });
+  }
+
+  // les tâches déjà en retard au lancement ne déclenchent pas d'alerte
+  db.tasks.forEach(t=>{ if(!t.done && t.due<=Date.now()-90000 && !fired[t.id]) fired[t.id]=Date.now(); });
+
+  notifPaint();
+  setInterval(checkDue,20000);
+
+  const now=new Date();
+  $("#tTime").value=pad(now.getHours())+":"+pad(now.getMinutes());
+  renderTab1(); renderTasks();
+  applyTheme();
+  setInterval(()=>{applyTheme();renderNext();renderTasks();},30000);
+})();
+</script></body></html>
