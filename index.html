@@ -496,6 +496,11 @@
     font-family:"Roboto Mono",ui-monospace,monospace;font-size:20px;color:var(--ink);text-align:center;
   }
   .tlab{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);margin:14px 0 8px}
+  #tDoseAuto{
+    background:none;border:1px solid var(--rule);color:var(--graphite);border-radius:8px;font:inherit;
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:12px 14px;cursor:pointer;flex:none;
+  }
+  #tDoseAuto[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
   #tAnalyze{
     flex:1;background:none;border:1px solid var(--rule);color:var(--ink);border-radius:8px;font:inherit;
     font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:12px;cursor:pointer;
@@ -503,6 +508,12 @@
   #tAnalyze:active{background:var(--ink);color:var(--paper)}
   #tAnalysis{font-size:13px;color:var(--graphite);line-height:1.5;margin-top:10px}
   #tAnalysis b{color:var(--ink);font-weight:600}
+  .ivtab{margin:10px 0 4px;border-top:1px solid var(--rule)}
+  .ivrow{display:flex;align-items:baseline;gap:8px;padding:6px 0;border-bottom:1px solid var(--rule);font-size:13px}
+  .ivrow span{color:var(--graphite)}
+  .ivrow sup{font-size:9px}
+  .ivrow b{margin-left:auto;color:var(--ink);font-variant-numeric:tabular-nums}
+  .ivrow i{font-style:normal;font-size:11px;color:var(--rule);width:52px;text-align:right}
   #tApply{
     display:block;margin-top:10px;background:var(--couche);color:#fff;border:none;border-radius:8px;
     font:inherit;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:11px 14px;cursor:pointer;
@@ -824,6 +835,12 @@
       <input id="tBottles" class="tfield" type="number" inputmode="numeric" min="1" max="12" step="1" placeholder="8">
       <span class="unit">🍼 total</span>
     </div>
+    <div class="tlab">Quantité par biberon</div>
+    <div class="sline">
+      <input id="tDoseInput" class="tfield" type="number" inputmode="numeric" min="0" step="5" placeholder="95">
+      <span class="unit">ml</span>
+      <button id="tDoseAuto">Auto</button>
+    </div>
     <div class="sline">
       <button id="tAnalyze">Analyser les 5 derniers jours</button>
     </div>
@@ -855,10 +872,10 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     return{get:()=>localStorage.getItem(KEY),set:v=>localStorage.setItem(KEY,v)};}
     catch(e){let m=null;return{get:()=>m,set:v=>m=v};}})();
 
-  let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,target:null,weight:null,appert:250,bottles:null,ivTarget:null,birth:null};
+  let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,ivProfile:null,target:null,weight:null,appert:250,bottles:null,dose:null,ivTarget:null,birth:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="5.4";
+  const VERSION="5.7";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -937,8 +954,21 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     const d=new Date(ts), h=d.getHours()+d.getMinutes()/60;
     return h>=NIGHT_START || h<NIGHT_END;
   }
-  // un seul intervalle : la cible observée si elle existe, sinon 24 h / nombre de biberons
-  function mealIv(){
+  // combien de biberons déjà pris le jour de ts, jusqu'à ts inclus
+  function rankOf(ts){
+    const d0=sod(new Date(ts));
+    return db.entries.filter(e=>e.kinds.includes("manger")&&e.ts>=d0&&e.ts<=ts).length;
+  }
+
+  // l'écart dépend du rang dans la journée : profil observé, puis repli sur la moyenne
+  function mealIv(ts){
+    const t=(typeof ts==="number")?ts:Date.now();
+    const prof=Array.isArray(db.ivProfile)?db.ivProfile:null;
+    if(prof && prof.length){
+      const r=Math.max(1,rankOf(t));
+      const g=prof[Math.min(r,prof.length)-1];
+      if(g>0) return g;
+    }
     if(db.ivTarget>0) return db.ivTarget;
     return db.bottles>0 ? 24/db.bottles : db.iv;
   }
@@ -989,7 +1019,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     $("#hCouche").textContent=lc?"dernière "+hm(lc):"aucune";
     $("#hManger").textContent=lb?"dernier "+hm(lb):"aucun";
     $("#ivC").textContent="(intervalle "+fmtIv(db.ivCouche)+")";
-    $("#ivM").textContent="(intervalle "+fmtIv(mealIv(Date.now()))+")";
+    $("#ivM").textContent="(intervalle "+fmtIv(mealIv(lb||Date.now()))+")";
   }
 
   const openGroups=new Set();
@@ -1561,10 +1591,12 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(typeof v.ivAuto!=="boolean") push("ivAuto",db.ivAuto);
     if(typeof v.ivCouche!=="number") push("ivCouche",db.ivCouche);
     if(v.ivTarget==null&&db.ivTarget) push("ivTarget",db.ivTarget);
+    if(v.ivProfile==null&&db.ivProfile) push("ivProfile",db.ivProfile);
     if(v.birth==null&&db.birth) push("birth",db.birth);
     if(v.target==null&&db.target) push("target",db.target);
     if(v.weight==null&&db.weight) push("weight",db.weight);
     if(v.bottles==null&&db.bottles) push("bottles",db.bottles);
+    if(v.dose==null&&db.dose) push("dose",db.dose);
   }
 
   let connectTimer=null;
@@ -2373,7 +2405,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   }
 
 
-  const doseParBiberon=()=>(db.target&&db.bottles)?Math.round(db.target/db.bottles/5)*5:null;
+  const doseTheorique=()=>(db.target&&db.bottles)?Math.round(db.target/db.bottles/5)*5:null;
+  const doseParBiberon=()=>(db.dose>0?db.dose:doseTheorique());
 
 
   /* bascule automatique jour / nuit */
@@ -2409,14 +2442,27 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     }
   }
 
+  let doseTouched=false;
   function paintDose(){
     const t=parseInt($("#tTarget").value,10), n=parseInt($("#tBottles").value,10);
-    if(isNaN(t)||isNaN(n)||n<=0){ $("#tDose").textContent="Saisissez un objectif et un nombre de biberons pour obtenir la dose."; return; }
-    const d=Math.round(t/n/5)*5;
-    $("#tDose").innerHTML=t+" ml ÷ "+n+" = <b>"+d+" ml</b> par biberon<br>"+
-      "Intervalle : 24 h ÷ "+n+" = <b>"+fmtIv(24/n)+"</b>"+
-      (db.ivTarget>0 ? " · cible observée en vigueur : <b>"+fmtIv(db.ivTarget)+"</b>" : "")+
-      (d>240? "<br>Dose élevée, mieux vaut répartir sur davantage de biberons." : "");
+    if(isNaN(t)||isNaN(n)||n<=0){
+      $("#tDose").textContent="Saisissez un objectif et un nombre de biberons pour obtenir la dose.";
+      $("#tDoseAuto").setAttribute("aria-pressed",!doseTouched);
+      return;
+    }
+    const theo=Math.round(t/n/5)*5;
+    if(!doseTouched) $("#tDoseInput").value=theo;
+    const man=parseInt($("#tDoseInput").value,10);
+    const eff=(!isNaN(man)&&man>0)?man:theo;
+    $("#tDoseAuto").setAttribute("aria-pressed", eff===theo && !doseTouched);
+    const total=eff*n;
+    $("#tDose").innerHTML=
+      t+" ml ÷ "+n+" = <b>"+theo+" ml</b> par biberon"+
+      (eff!==theo ? " · réglage manuel : <b>"+eff+" ml</b>, soit "+total+" ml sur "+n+" biberons" : "")+
+      "<br>Intervalle : 24 h ÷ "+n+" = <b>"+fmtIv(24/n)+"</b>"+
+      (Array.isArray(db.ivProfile)&&db.ivProfile.length ? " · rythme observé en vigueur"
+        : (db.ivTarget>0 ? " · cible observée : <b>"+fmtIv(db.ivTarget)+"</b>" : ""))+
+      (eff>240? "<br>Dose élevée, mieux vaut répartir sur davantage de biberons." : "");
   }
 
   function paintCalc(){
@@ -2434,49 +2480,83 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   /* ---------- analyse du rythme réel ---------- */
   let pendingIv=null;
 
+  const median=a=>{ const x=a.slice().sort((m,n)=>m-n);
+    return x.length%2 ? x[(x.length-1)/2] : (x[x.length/2-1]+x[x.length/2])/2; };
+  const r5min=h=>Math.round(h*12)/12;
+
   function analyzeRhythm(days){
-    const today=sod(new Date()), gaps=[], perDay=[];
-    for(let i=0;i<days;i++){
+    const today=sod(new Date());
+    const parRang={}, tous=[], perDay=[];
+    // une journée de plus en mémoire pour mesurer l'écart de nuit du dernier jour
+    const jour=i=>{
       const d0=today-i*864e5;
-      const list=db.entries.filter(e=>e.kinds.includes("manger")&&e.ts>=d0&&e.ts<d0+864e5)
-                           .sort((a,b)=>a.ts-b.ts);
+      return db.entries.filter(e=>e.kinds.includes("manger")&&e.ts>=d0&&e.ts<d0+864e5)
+                       .sort((a,b)=>a.ts-b.ts);
+    };
+    for(let i=days;i>=1;i--){
+      const list=jour(i);
       if(!list.length) continue;
       perDay.push(list.length);
-      for(let k=1;k<list.length;k++){
-        const g=(list[k].ts-list[k-1].ts)/36e5;
-        if(g>=0.5&&g<=8) gaps.push(g);   // on ignore les doublons et les trous aberrants
+      const suiv=jour(i-1);
+      for(let k=0;k<list.length;k++){
+        const apres = (k<list.length-1) ? list[k+1] : (suiv[0]||null);   // dernier → 1er du lendemain
+        if(!apres) continue;
+        const g=(apres.ts-list[k].ts)/36e5;
+        if(g<0.5||g>10) continue;        // doublons et trous de saisie écartés
+        (parRang[k]=parRang[k]||[]).push(g);
+        tous.push(g);
       }
     }
-    if(gaps.length<4) return null;
-    gaps.sort((a,b)=>a-b);
-    const med=gaps.length%2 ? gaps[(gaps.length-1)/2]
-                            : (gaps[gaps.length/2-1]+gaps[gaps.length/2])/2;
-    const iv=Math.round(med*12)/12;      // arrondi aux 5 minutes
-    return {iv, n:gaps.length, jours:perDay.length,
+    if(tous.length<5) return null;
+    const global=r5min(median(tous));
+    const rangs=Object.keys(parRang).map(Number).sort((a,b)=>a-b);
+    const maxRang=rangs.length?rangs[rangs.length-1]:0;
+    const profile=[];
+    for(let k=0;k<=maxRang;k++){
+      const ech=parRang[k]||[];
+      // sous deux observations, on retombe sur la médiane globale
+      profile.push(ech.length>=2 ? r5min(median(ech)) : global);
+    }
+    return {profile, global, n:tous.length, jours:perDay.length,
+            echantillons:profile.map((_,k)=>(parRang[k]||[]).length),
             parJour:perDay.reduce((a,c)=>a+c,0)/perDay.length};
   }
 
   function paintAnalysis(res){
     const box=$("#tAnalysis");
     if(res===undefined){
-      box.innerHTML = db.ivTarget>0
-        ? "Intervalle cible actuel : <b>"+fmtIv(db.ivTarget)+"</b>, issu de l'observation. <button id='tUndo'>Revenir au calcul automatique</button>"
-        : "";
+      const prof=Array.isArray(db.ivProfile)?db.ivProfile:null;
+      box.innerHTML = prof
+        ? "Rythme observé en vigueur : "+prof.map(g=>fmtIv(g)).join(" · ")+
+          ". <button id='tUndo'>Revenir au calcul automatique</button>"
+        : (db.ivTarget>0
+          ? "Intervalle cible actuel : <b>"+fmtIv(db.ivTarget)+"</b>, issu de l'observation. <button id='tUndo'>Revenir au calcul automatique</button>"
+          : "");
     }else if(!res){
       box.innerHTML="Pas assez de repas enregistrés sur les 5 derniers jours pour dégager un rythme.";
     }else{
-      pendingIv=res.iv;
+      pendingIv=res;
+      const lignes=res.profile.map((g,k)=>
+        '<div class="ivrow"><span>'+(k===res.profile.length-1
+            ? "dernier → 1<sup>er</sup> du lendemain"
+            : (k+1)+'<sup>'+(k?"e":"er")+'</sup> → '+(k+2)+'<sup>e</sup>')+'</span>'+
+        '<b>'+fmtIv(g)+'</b><i>'+(res.echantillons[k]||0)+' obs.</i></div>').join("");
       box.innerHTML="Sur "+res.jours+" jour"+(res.jours>1?"s":"")+", "+res.parJour.toFixed(1)+
-        " biberons par jour et un écart médian de <b>"+fmtIv(res.iv)+"</b> ("+res.n+" intervalles). "+
-        "Le calcul théorique donne "+(db.bottles?fmtIv(24/db.bottles):"—")+"."+
-        "<button id='tApply'>Adopter "+fmtIv(res.iv)+" comme intervalle</button>";
+        " biberons par jour ("+res.n+" intervalles mesurés). Écart observé après chaque biberon :"+
+        '<div class="ivtab">'+lignes+'</div>'+
+        "Médiane toutes prises confondues : <b>"+fmtIv(res.global)+"</b>, contre "+
+        (db.bottles?fmtIv(24/db.bottles):"—")+" en théorique."+
+        "<button id='tApply'>Adopter ce rythme</button>";
     }
     const ap=$("#tApply"); if(ap) ap.addEventListener("click",()=>{
-      db.ivTarget=pendingIv; saveLocal(); push("ivTarget",db.ivTarget);
+      db.ivProfile=pendingIv.profile.slice();
+      db.ivTarget=pendingIv.global;
+      saveLocal(); push("ivProfile",db.ivProfile); push("ivTarget",db.ivTarget);
       paintAnalysis(); paintDose(); renderTab1();
     });
     const un=$("#tUndo"); if(un) un.addEventListener("click",()=>{
-      db.ivTarget=null; saveLocal(); push("ivTarget",null);
+      db.ivTarget=null; db.ivProfile=null;
+      saveLocal(); push("ivTarget",null); push("ivProfile",null);
       paintAnalysis(); paintDose(); renderTab1();
     });
   }
@@ -2488,6 +2568,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     $("#tTarget").value = db.target||"";
     $$("#tConst button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.k===db.appert));
     $("#tBottles").value = db.bottles||"";
+    doseTouched = db.dose>0;
+    $("#tDoseInput").value = db.dose>0 ? db.dose : "";
     pendingIv=null; paintAnalysis();
     if(db.weight) paintCalc(); else $("#tCalc").textContent="Saisissez le poids pour appliquer la règle d'Appert.";
     $("#tTarget").value = db.target||"";
@@ -2498,6 +2580,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   $("#gauge").addEventListener("click",openTarget);
   $("#tWeight").addEventListener("input",paintCalc);
   $("#tBottles").addEventListener("input",paintDose);
+  $("#tDoseInput").addEventListener("input",()=>{ doseTouched=true; paintDose(); });
+  $("#tDoseAuto").addEventListener("click",()=>{ doseTouched=false; $("#tDoseInput").value=""; paintDose(); });
   $("#tTarget").addEventListener("input",paintDose);
   $$("#tConst button").forEach(b=>b.addEventListener("click",()=>{
     db.appert=+b.dataset.k; paintCalc();
@@ -2510,8 +2594,11 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     db.weight=isNaN(w)?null:w;
     db.target=isNaN(t)?null:t;
     db.bottles=(isNaN(n)||n<=0)?null:n;
+    const dm=parseInt($("#tDoseInput").value,10);
+    const theo=(db.target&&db.bottles)?Math.round(db.target/db.bottles/5)*5:null;
+    db.dose=(doseTouched && !isNaN(dm) && dm>0 && dm!==theo) ? dm : null;
     saveLocal(); push("weight",db.weight); push("target",db.target);
-    push("appert",db.appert); push("bottles",db.bottles);
+    push("appert",db.appert); push("bottles",db.bottles); push("dose",db.dose);
     $("#tsheet").classList.remove("open");
     renderTab1();
   });
