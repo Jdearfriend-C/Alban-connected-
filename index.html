@@ -163,6 +163,9 @@
   .npill .lbl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--graphite);display:block}
   .npill.couche .lbl{color:var(--couche)}
   .npill.manger .lbl{color:var(--biberon)}
+  .trow{display:flex;align-items:center;gap:4px}
+  .npset{display:flex;align-items:center;background:none;border:none;padding:8px 6px 8px 4px;color:var(--graphite);cursor:pointer;line-height:0;opacity:.75}
+  .npset:active{color:var(--couche);opacity:1}
   .npill .t{font-size:26px;font-weight:500;letter-spacing:-.02em;margin-top:2px;display:block;color:var(--ink)}
   .npill .d{font-size:11px;color:var(--graphite);letter-spacing:.04em}
   .npill.due .t{color:var(--signal)}
@@ -201,13 +204,124 @@
   .interval button{background:none;border:1px solid var(--rule);color:var(--ink);font:inherit;font-size:12px;padding:5px 10px;cursor:pointer;border-radius:8px}
   .interval button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 
-  .sechead{display:flex;align-items:baseline;gap:10px;margin:24px 0 4px}
-  .sechead h2.sec{margin:0;flex:1}
+  .sechead{display:flex;justify-content:center;margin:22px 0 6px}
   #statsOpen{
-    background:none;border:1px solid var(--rule);border-radius:8px;font:inherit;font-size:12px;
-    color:var(--ink);padding:7px 11px;cursor:pointer;letter-spacing:.02em;
+    background:none;border:1px solid var(--rule);border-radius:8px;font:inherit;font-size:13px;
+    color:var(--ink);padding:10px 18px;cursor:pointer;letter-spacing:.02em;
   }
   #statsOpen:active{background:var(--ink);color:var(--paper)}
+
+  /* ---------- bouton flottant + pages de réglages ---------- */
+  #fab{
+    position:fixed;left:18px;bottom:calc(18px + env(safe-area-inset-bottom));
+    width:48px;height:48px;border-radius:50%;border:none;z-index:18;
+    background:var(--ink);color:var(--paper);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 3px 14px rgba(24,32,40,.26);
+  }
+  #fab:active{transform:scale(.94)}
+  body.pageopen #fab{display:none}
+
+  #set{
+    position:fixed;inset:0;background:var(--paper);z-index:34;display:none;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #set.open{display:flex}
+  /* bottom sheet des réglages */
+  #setSub{position:fixed;inset:0;background:rgba(24,32,40,.45);display:none;align-items:flex-end;z-index:36}
+  #setSub.open{display:flex}
+  #subBox{
+    width:100%;background:var(--paper);border-top:2px solid var(--ink);border-radius:8px 8px 0 0;
+    max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:18px 20px calc(22px + env(safe-area-inset-bottom));
+  }
+  .shhead{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .shhead h3{flex:1;font-size:20px;font-weight:600;letter-spacing:-.01em}
+  .shhead button{background:none;border:none;font:inherit;font-size:26px;line-height:1;color:var(--graphite);cursor:pointer;padding:0 2px 4px}
+  body.dark #setSub{background:rgba(0,0,0,.6)}
+  /* trois points : signale un panneau qui s'ouvre */
+  /* trois points : signale un panneau qui s'ouvre par le bas */
+  .dots3{
+    display:block;width:3.5px;height:3.5px;border-radius:50%;background:currentColor;flex:none;margin:6px 5px;
+    box-shadow:0 -6px 0 currentColor, 0 6px 0 currentColor;
+  }
+
+  .pghead{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--rule)}
+  .pgback{background:none;border:none;font:inherit;font-size:22px;line-height:1;color:var(--ink);cursor:pointer;padding:2px 6px 4px 0}
+  .pgtitle{flex:1;font-size:16px;font-weight:600;letter-spacing:-.01em}
+  .pgbody{flex:1;min-height:0;overflow-y:auto;padding:18px 20px 30px}
+
+  .sgroup{margin-bottom:24px}
+  .sglab{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);margin:0 0 8px 2px}
+  .slink{
+    width:100%;display:flex;align-items:center;gap:10px;background:var(--card);
+    border:1px solid var(--rule);border-bottom:none;font:inherit;color:var(--ink);
+    padding:15px 14px;cursor:pointer;text-align:left;
+  }
+  .slink:first-of-type{border-radius:8px 8px 0 0}
+  .slink:last-of-type{border-radius:0 0 8px 8px;border-bottom:1px solid var(--rule)}
+  .sgroup .slink:only-of-type{border-radius:8px}
+  .slink:active{background:var(--sunk)}
+  .sl1{font-size:15px;flex:none}
+  .sl2{flex:1;text-align:right;font-size:13px;color:var(--graphite);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .slink .chev{
+    width:7px;height:7px;flex:none;border-right:1.5px solid var(--graphite);
+    border-bottom:1.5px solid var(--graphite);transform:rotate(-45deg);
+  }
+  .sfoot{text-align:center;font-size:11px;letter-spacing:.14em;color:var(--rule);padding-top:10px}
+  .pintro{font-size:13px;line-height:1.55;color:var(--graphite);margin-bottom:16px}
+  .spanel[hidden]{display:none}
+
+  /* liste des modes */
+  .mode{
+    width:100%;display:flex;align-items:flex-start;gap:12px;background:var(--card);
+    border:1px solid var(--rule);border-radius:8px;padding:14px;margin-bottom:10px;
+    font:inherit;color:var(--ink);text-align:left;cursor:pointer;
+  }
+  .mode .dotsel{
+    width:18px;height:18px;flex:none;border-radius:50%;border:1.5px solid var(--rule);margin-top:2px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .mode[aria-pressed="true"]{border-color:var(--ink)}
+  .mode[aria-pressed="true"] .dotsel{border-color:var(--ink)}
+  .mode[aria-pressed="true"] .dotsel::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--ink)}
+  .mode>span:nth-child(2){flex:1;min-width:0}
+  .mode .mt{display:block;font-size:15px;font-weight:600;letter-spacing:-.01em}
+  .mode .md{display:block;font-size:12.5px;line-height:1.5;color:var(--graphite);margin-top:3px}
+  .mode[disabled]{opacity:.5;cursor:default}
+  .mode .soon{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--graphite);
+    border:1px solid var(--rule);border-radius:8px;padding:2px 6px;margin-left:auto;flex:none}
+  #modeHint{font-size:12.5px;line-height:1.55;color:var(--graphite);margin-top:6px}
+
+  #ivsheet{position:fixed;inset:0;background:rgba(24,32,40,.45);display:none;align-items:flex-end;z-index:36}
+  #ivsheet.open{display:flex}
+  #ivbox{
+    width:100%;background:var(--paper);border-top:2px solid var(--ink);border-radius:8px 8px 0 0;
+    padding:18px 20px calc(22px + env(safe-area-inset-bottom));
+  }
+  .ivchip{
+    flex:1;border:1.5px solid var(--rule);background:var(--card);border-radius:8px;font:inherit;
+    font-size:16px;font-weight:500;padding:16px 4px;cursor:pointer;color:var(--ink);
+  }
+  .ivchip[aria-pressed="true"]{background:var(--couche);border-color:var(--couche);color:#fff}
+  body.dark #ivsheet{background:rgba(0,0,0,.6)}
+  body.dark .ivchip[aria-pressed="true"]{color:#0E1319}
+
+  /* confirmation de changement de mode */
+  #mconf{position:fixed;inset:0;background:rgba(24,32,40,.45);display:none;align-items:flex-end;z-index:38}
+  #mconf.open{display:flex}
+  #mbox{
+    width:100%;background:var(--paper);border-top:2px solid var(--ink);border-radius:8px 8px 0 0;
+    padding:20px 20px calc(20px + env(safe-area-inset-bottom));
+  }
+  #mbox h3{font-size:20px;font-weight:600;letter-spacing:-.01em;margin-bottom:12px}
+  #mbox .body{font-size:13.5px;line-height:1.6;color:var(--graphite)}
+  #mbox .body b{color:var(--ink);font-weight:600}
+  #mbox ul{margin:10px 0 0 18px}
+  #mbox li{margin-bottom:5px}
+  #mCancel{background:none;border:1px solid var(--rule);color:var(--graphite)}
+  #mOk{background:var(--ink);color:var(--paper);flex:2}
+  body.dark #mconf{background:rgba(0,0,0,.6)}
 
   /* ---------- time machine ---------- */
   #tm{
@@ -381,11 +495,7 @@
   .rep{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--graphite);border:1px solid var(--rule);padding:2px 5px;border-radius:8px}
 
   /* ---------- partage ---------- */
-  #share{
-    margin-top:26px;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px;
-  }
-  #share h3{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);font-weight:600}
-  #share p{font-size:13px;line-height:1.5;color:var(--graphite);margin-top:8px}
+  #share p{font-size:13px;line-height:1.55;color:var(--graphite);margin-bottom:4px}
   #share .line{display:flex;gap:8px;margin-top:12px}
   #dbUrl,#spaceCode{
     flex:1;min-width:0;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:12px;
@@ -397,7 +507,7 @@
   }
   #spaceGen{background:none;border:1px solid var(--rule);color:var(--graphite);border-radius:8px;font:inherit;font-size:12px;padding:12px 14px;cursor:pointer}
   #shareState{font-size:12px;color:var(--graphite);margin-top:10px}
-  #backupBox{margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)}
+  #backupBox{margin-top:4px}
   .bkrow{display:flex;gap:8px;flex-wrap:wrap}
   .bkrow button,#bkImportBtn{
     flex:1;position:relative;text-align:center;background:none;border:1px solid var(--rule);
@@ -406,7 +516,7 @@
   }
   #bkPull{flex:1 1 100%;border-color:var(--couche);color:var(--couche)}
   #bkState{font-size:12px;color:var(--graphite);margin-top:8px;line-height:1.45}
-  #notifBox{margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)}
+  #notifBox{margin-top:4px}
   #notifBtn{
     background:none;border:1px solid var(--rule);color:var(--ink);border-radius:8px;font:inherit;
     font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:11px 14px;cursor:pointer;
@@ -459,6 +569,7 @@
   .kchip[aria-pressed="true"][data-k="couche"]{background:var(--couche);border-color:var(--couche);color:#fff}
   .kchip[aria-pressed="true"][data-k="manger"]{background:var(--biberon);border-color:var(--biberon);color:#fff}
   .slab{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);margin:0 0 8px}
+  #eType{margin-bottom:10px}
   .dchip,.mchip{
     flex:1;border:1.5px solid var(--rule);background:var(--card);border-radius:8px;font:inherit;
     font-size:17px;font-weight:500;padding:19px 6px;cursor:pointer;color:var(--ink);
@@ -496,6 +607,7 @@
     font-family:"Roboto Mono",ui-monospace,monospace;font-size:20px;color:var(--ink);text-align:center;
   }
   .tlab{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--graphite);margin:14px 0 8px}
+  .mlonly[hidden]{display:none}
   #tDoseAuto{
     background:none;border:1px solid var(--rule);color:var(--graphite);border-radius:8px;font:inherit;
     font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:12px 14px;cursor:pointer;flex:none;
@@ -572,7 +684,7 @@
 <header>
   <div class="hrow">
     <div id="dateline"></div>
-    <button id="sync" title="État de la synchronisation"><span id="syncDot"></span><span id="syncLabel">Local</span></button>
+    <button id="sync" title="État de la synchronisation"><span id="syncDot"></span><span id="syncLabel">Local</span><span class="dots3"></span></button>
   </div>
   <div id="ident">
     <div id="stack">
@@ -623,45 +735,11 @@
       </div>
       <button class="log-btn b-both" data-kind="both"><span class="n">Les deux</span><span class="s">Une seule entrée</span></button>
     </div>
-    <div class="interval">
-      <span class="caps">Couche</span>
-      <button data-ivc="2">2 h</button><button data-ivc="3">3 h</button>
-      <button data-ivc="4">4 h</button><button data-ivc="6">6 h</button>
-    </div>
     <div class="sechead">
-      <h2 class="sec">Journal</h2>
       <button id="statsOpen">Voir les stats 🍼</button>
     </div>
     <div id="log"></div>
 
-    <div id="share">
-      <h3>Partage à deux</h3>
-      <p>Saisissez le même code sur les deux téléphones. Entrées, tâches et note sont alors synchronisées en temps réel.</p>
-      <div class="line">
-        <input id="dbUrl" placeholder="https://…firebasedatabase.app" autocomplete="off" autocapitalize="off" spellcheck="false">
-      </div>
-      <div class="line">
-        <input id="spaceCode" placeholder="code d'espace" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <button id="spaceGen" title="Générer un code">⟳</button>
-        <button id="spaceBtn">Relier</button>
-      </div>
-      <div id="shareState"></div>
-      <div id="backupBox">
-        <div class="bkrow">
-          <button id="bkPull">⤓ Récupérer depuis le serveur</button>
-        </div>
-        <div class="bkrow">
-          <button id="bkExport">Exporter</button>
-          <span id="bkImportBtn">Importer<input type="file" id="bkFile" class="filepick" accept=".json,application/json"></span>
-          <button id="bkRestore">Sauvegarde locale</button>
-        </div>
-        <div id="bkState"></div>
-      </div>
-      <div id="notifBox">
-        <button id="notifBtn">Activer les rappels</button>
-        <div id="notifState"></div>
-      </div>
-    </div>
   </section>
 
   <section class="tab" id="p2" role="tabpanel" hidden>
@@ -696,6 +774,130 @@
     </div>
   </section>
 </main>
+
+<button id="fab" aria-label="Réglages">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path fill="currentColor" fill-rule="evenodd" d="M22.70 9.43 L22.70 14.57 L19.51 13.19 L18.15 16.47 L21.38 17.75 L17.75 21.38 L16.47 18.15 L13.19 19.51 L14.57 22.70 L9.43 22.70 L10.81 19.51 L7.53 18.15 L6.25 21.38 L2.62 17.75 L5.85 16.47 L4.49 13.19 L1.30 14.57 L1.30 9.43 L4.49 10.81 L5.85 7.53 L2.62 6.25 L6.25 2.62 L7.53 5.85 L10.81 4.49 L9.43 1.30 L14.57 1.30 L13.19 4.49 L16.47 5.85 L17.75 2.62 L21.38 6.25 L18.15 7.53 L19.51 10.81 Z M15.00 12 A 3.00 3.00 0 1 0 9.00 12 A 3.00 3.00 0 1 0 15.00 12 Z"/>
+  </svg>
+</button>
+
+<section id="set" role="dialog" aria-modal="true">
+  <div class="pghead">
+    <button class="pgback" id="setBack" aria-label="Retour">←</button>
+    <span class="pgtitle">Réglages</span>
+  </div>
+  <div class="pgbody">
+    <div class="sgroup">
+      <div class="sglab">Suivi</div>
+      <button class="slink" data-pan="mode">
+        <span class="sl1">Mode de suivi</span><span class="sl2" id="lkMode"></span><span class="chev"></span>
+      </button>
+      <button class="slink" id="lkRation">
+        <span class="sl1">Ration journalière</span><span class="sl2" id="lkRationV"></span><span class="chev"></span>
+      </button>
+    </div>
+
+    <div class="sgroup">
+      <div class="sglab">Synchronisation</div>
+      <button class="slink" data-pan="sync">
+        <span class="sl1">Partage à deux</span><span class="sl2" id="lkSync"></span><span class="chev"></span>
+      </button>
+      <button class="slink" data-pan="notif">
+        <span class="sl1">Rappels</span><span class="sl2" id="lkNotif"></span><span class="chev"></span>
+      </button>
+    </div>
+
+    <div class="sgroup">
+      <div class="sglab">Données</div>
+      <button class="slink" data-pan="data">
+        <span class="sl1">Sauvegarde et restauration</span><span class="sl2" id="lkData"></span><span class="chev"></span>
+      </button>
+    </div>
+
+    <div class="sfoot"><span id="ver2"></span></div>
+  </div>
+</section>
+
+<div id="setSub" role="dialog" aria-modal="true">
+  <div id="subBox">
+    <div class="shhead">
+      <h3 id="subTitle"></h3>
+      <button id="subBack" aria-label="Fermer">×</button>
+    </div>
+    <div id="setSubBody">
+
+    <div class="spanel" id="pan-mode" hidden>
+      <p class="pintro">Le mode choisi adapte ce que l'app enregistre, la jauge du jour, les options du bouton Manger et les statistiques.</p>
+      <div id="modeList"></div>
+      <div id="modeHint"></div>
+    </div>
+
+    <div class="spanel" id="pan-sync" hidden>
+      <div id="share">
+        <p>Saisissez le même code sur les deux téléphones. Entrées, tâches, note et photos sont alors synchronisées en temps réel.</p>
+        <div class="line">
+          <input id="dbUrl" placeholder="https://…firebasedatabase.app" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
+        <div class="line">
+          <input id="spaceCode" placeholder="code d'espace" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button id="spaceGen" title="Générer un code">⟳</button>
+          <button id="spaceBtn">Relier</button>
+        </div>
+        <div id="shareState"></div>
+      </div>
+    </div>
+
+    <div class="spanel" id="pan-data" hidden>
+      <p class="pintro">Vos entrées vivent sur le serveur et sur cet appareil. Un export régulier vous met à l'abri des deux.</p>
+      <div id="backupBox">
+        <div class="bkrow">
+          <button id="bkPull">⤓ Récupérer depuis le serveur</button>
+        </div>
+        <div class="bkrow">
+          <button id="bkExport">Exporter</button>
+          <span id="bkImportBtn">Importer<input type="file" id="bkFile" class="filepick" accept=".json,application/json"></span>
+          <button id="bkRestore">Sauvegarde locale</button>
+        </div>
+        <div id="bkState"></div>
+      </div>
+    </div>
+
+    <div class="spanel" id="pan-notif" hidden>
+      <p class="pintro">Alerte à l'heure prévue d'une tâche, tant que l'app est ouverte. Pour un rappel fiable écran verrouillé, utilisez le bouton Rappel de chaque tâche, qui passe par le calendrier.</p>
+      <div id="notifBox">
+        <button id="notifBtn">Activer les rappels</button>
+        <div id="notifState"></div>
+      </div>
+    </div>
+
+  </div>
+  </div>
+</div>
+
+<div id="ivsheet" role="dialog" aria-modal="true">
+  <div id="ivbox">
+    <div class="shhead">
+      <h3>Intervalle entre les couches</h3>
+      <button id="ivClose" aria-label="Fermer">×</button>
+    </div>
+    <p class="pintro">Sert à calculer l'heure de la prochaine couche à partir de la dernière enregistrée.</p>
+    <div class="sline">
+      <button class="ivchip" data-ivc="2">2 h</button><button class="ivchip" data-ivc="3">3 h</button>
+      <button class="ivchip" data-ivc="4">4 h</button><button class="ivchip" data-ivc="6">6 h</button>
+    </div>
+  </div>
+</div>
+
+<div id="mconf" role="dialog" aria-modal="true">
+  <div id="mbox">
+    <h3 id="mTitle"></h3>
+    <div class="body" id="mBody"></div>
+    <div class="sactions">
+      <button id="mCancel">Annuler</button>
+      <button id="mOk">Changer de mode</button>
+    </div>
+  </div>
+</div>
 
 <section id="tm" role="dialog" aria-modal="true">
   <div id="tmHead">
@@ -781,6 +983,11 @@
     </div>
 
     <div id="eMeal">
+      <div class="sline" id="eType">
+        <button class="mchip" data-m="biberon">Biberon</button>
+        <button class="mchip" data-m="sein">Sein</button>
+        <button class="mchip" data-m="both">Les deux</button>
+      </div>
       <div class="sline mlline">
         <button class="quick" data-ml="-10">−10</button>
         <input id="eMl" type="number" inputmode="numeric" min="0" step="5">
@@ -815,7 +1022,8 @@
 
 <div id="tsheet" role="dialog" aria-modal="true">
   <div id="tbox">
-    <h3>Ration journalière</h3>
+    <h3 id="tHead">Ration journalière</h3>
+    <div class="mlonly">
     <div class="tlab">Poids du bébé</div>
     <div class="sline">
       <input id="tWeight" class="tfield" type="number" inputmode="numeric" min="0" step="10" placeholder="3500">
@@ -830,23 +1038,26 @@
       <input id="tTarget" class="tfield" type="number" inputmode="numeric" min="0" step="10" placeholder="750">
       <span class="unit">ml</span>
     </div>
-    <div class="tlab">Biberons par jour</div>
+    </div>
+    <div class="tlab" id="tBotLab">Biberons par jour</div>
     <div class="sline">
       <input id="tBottles" class="tfield" type="number" inputmode="numeric" min="1" max="12" step="1" placeholder="8">
-      <span class="unit">🍼 total</span>
+      <span class="unit" id="tBotUnit">🍼 total</span>
     </div>
+    <div class="mlonly">
     <div class="tlab">Quantité par biberon</div>
     <div class="sline">
       <input id="tDoseInput" class="tfield" type="number" inputmode="numeric" min="0" step="5" placeholder="95">
       <span class="unit">ml</span>
       <button id="tDoseAuto">Auto</button>
     </div>
+    </div>
     <div class="sline">
       <button id="tAnalyze">Analyser les 5 derniers jours</button>
     </div>
     <div id="tAnalysis"></div>
-    <div id="tDose"></div>
-    <div id="tDisc">Règle d'Appert : poids en grammes ÷ 10 + 250 ml. Repère indicatif pour l'alimentation au biberon, valable jusqu'à environ 6 kg. À ajuster selon l'appétit du bébé et l'avis de votre pédiatre.</div>
+    <div id="tDose" class="mlonly"></div>
+    <div id="tDisc" class="mlonly">Règle d'Appert : poids en grammes ÷ 10 + 250 ml. Repère indicatif pour l'alimentation au biberon, valable jusqu'à environ 6 kg. À ajuster selon l'appétit du bébé et l'avis de votre pédiatre.</div>
     <div class="sactions">
       <button id="tClose">Annuler</button>
       <button id="tSave">Enregistrer</button>
@@ -872,10 +1083,10 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     return{get:()=>localStorage.getItem(KEY),set:v=>localStorage.setItem(KEY,v)};}
     catch(e){let m=null;return{get:()=>m,set:v=>m=v};}})();
 
-  let db={entries:[],tasks:[],notes:[],iv:3,ivAuto:true,ivCouche:3,ivProfile:null,target:null,weight:null,appert:250,bottles:null,dose:null,ivTarget:null,birth:null};
+  let db={entries:[],tasks:[],notes:[],mode:"biberon",iv:3,ivAuto:true,ivCouche:3,ivProfile:null,target:null,weight:null,appert:250,bottles:null,dose:null,ivTarget:null,birth:null};
   try{Object.assign(db,JSON.parse(store.get()||"{}"));}catch(e){}
   // migration : les anciennes entrées sans id
-  const VERSION="5.7";
+  const VERSION="6.4";
   let seq=0;
   const dev=Math.random().toString(36).slice(2,6);
   const uid=()=>Date.now().toString(36)+dev+(++seq).toString(36);
@@ -991,8 +1202,9 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       out.push("Couche"+(e.couche.length?' <i>· '+e.couche.join(" + ")+'</i>':""));
     if(e.kinds.includes("manger")){
       const t=(e.meal&&e.meal.type)||"biberon";
-      const nom = t==="sein" ? "Sein" : t==="both" ? "Sein + biberon" : "Biberon";
-      out.push(nom+(e.meal&&e.meal.ml?' <i>· '+e.meal.ml+' ml</i>':"")+
+      const nom = (db.mode==="allaitement") ? "Tétée"
+                : t==="sein" ? "Sein" : t==="both" ? "Sein + biberon" : "Biberon";
+      out.push(nom+((useMl()&&e.meal&&e.meal.ml)?' <i>· '+e.meal.ml+' ml</i>':"")+
         (e.meal&&e.meal.dur?' <i>· '+Math.max(1,Math.round(e.meal.dur/60))+' min</i>':""));
     }
     return out.join(" + ");
@@ -1005,20 +1217,25 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       const last=lastOf(k);
       const b=document.createElement("div");
       b.className="npill "+k;
-      if(last===null){
-        b.innerHTML='<span class="lbl">'+lbl+'</span><span class="t">—</span><span class="d">aucune entrée</span>';
-      }else{
-        const nxt=last+((k==="couche"?db.ivCouche:mealIv(last))*36e5);
-        if(nxt<=Date.now())b.classList.add("due");
-        b.innerHTML='<span class="lbl">'+lbl+'</span><span class="t mono">'+hm(nxt)+'</span>'+
-                    '<span class="d">'+dayLabel(nxt)+' · '+delta(nxt)+'</span>';
-      }
+      const reglage = k==="couche"
+        ? '<button class="npset" id="ivCouchebtn" aria-label="Régler l\'intervalle des couches"><span class="dots3"></span></button>'
+        : "";
+      const heure = last===null ? '<span class="t">—</span>'
+        : '<span class="t mono">'+hm(last+((k==="couche"?db.ivCouche:mealIv(last))*36e5))+'</span>';
+      const sous = last===null ? "aucune entrée"
+        : (()=>{ const nxt=last+((k==="couche"?db.ivCouche:mealIv(last))*36e5);
+                 if(nxt<=Date.now()) b.classList.add("due");
+                 return dayLabel(nxt)+' · '+delta(nxt); })();
+      b.innerHTML='<span class="lbl">'+lbl+'</span>'+
+                  '<span class="trow">'+heure+reglage+'</span>'+
+                  '<span class="d">'+sous+'</span>';
       box.appendChild(b);
     });
     const lc=lastOf("couche"), lb=lastOf("manger");
     $("#hCouche").textContent=lc?"dernière "+hm(lc):"aucune";
     $("#hManger").textContent=lb?"dernier "+hm(lb):"aucun";
     $("#ivC").textContent="(intervalle "+fmtIv(db.ivCouche)+")";
+    const ivb=$("#ivCouchebtn"); if(ivb) ivb.addEventListener("click",openIvCouche);
     $("#ivM").textContent="(intervalle "+fmtIv(mealIv(lb||Date.now()))+")";
   }
 
@@ -1037,7 +1254,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   const groupBottles=items=>items.reduce((n,e)=>{
     if(!e.kinds.includes("manger")) return n;
     const t=(e.meal&&e.meal.type)||"biberon";
-    return n + ((t==="biberon"||t==="both")?1:0);
+    return n + ((countAll()||t==="biberon"||t==="both")?1:0);
   },0);
 
   function groupEntries(list){
@@ -1103,14 +1320,22 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
   function renderTab1(){
     $("#dateline").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
-    $$("[data-ivc]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.ivc===db.ivCouche));
     renderIdent(); renderNext(); renderLog(); renderGauge(); renderTip();
   }
 
   $$(".log-btn").forEach(b=>b.addEventListener("click",()=>
     openCompose(b.dataset.kind==="both"?["couche","manger"]:[b.dataset.kind])));
-  $$("[data-ivc]").forEach(b=>b.addEventListener("click",()=>{
-    db.ivCouche=+b.dataset.ivc; saveLocal(); push("ivCouche",db.ivCouche); renderTab1();
+  function openIvCouche(){
+    $$(".ivchip").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.ivc===db.ivCouche));
+    $("#ivsheet").classList.add("open");
+  }
+  const closeIv=()=>$("#ivsheet").classList.remove("open");
+  $("#ivClose").addEventListener("click",closeIv);
+  $("#ivsheet").addEventListener("click",ev=>{ if(ev.target===$("#ivsheet")) closeIv(); });
+  $$(".ivchip").forEach(b=>b.addEventListener("click",()=>{
+    db.ivCouche=+b.dataset.ivc; saveLocal(); push("ivCouche",db.ivCouche);
+    $$(".ivchip").forEach(x=>x.setAttribute("aria-pressed",x===b));
+    closeIv(); renderTab1();
   }));
 
   /* ---------- feuille d'édition ---------- */
@@ -1127,6 +1352,10 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       const on = k==="both" ? (eCouche.length===2) : (eCouche.length===1 && eCouche[0]===k);
       c.setAttribute("aria-pressed",on);
     });
+    $("#eType").style.display = (hasM && askType()) ? "" : "none";
+    $$(".mchip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.m===eMeal.type));
+    const needsMl = useMl() && eMeal.type!=="sein";
+    $(".mlline").style.display = (hasM && needsMl) ? "" : "none";
     $("#eMl").value = eMeal.ml==null ? "" : eMeal.ml;
     paintTimer();
   }
@@ -1180,11 +1409,14 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(now-guard<600) return;
     guard=now;
     editing={type:"entry",id:null,mode:"compose"};
-    eKinds=kinds.slice(); eCouche=[]; eMeal={type:"biberon",ml:(doseParBiberon()||20)};
+    eKinds=kinds.slice(); eCouche=[];
+    const t0 = (db.mode==="allaitement") ? "sein" : "biberon";
+    eMeal={type:t0, ml:(t0==="sein"||!useMl()) ? null : (doseParBiberon()||20)};
     resetTimer();
     eDayOffset=0; eBase=now;
-    $("#eTitle").textContent = kinds.length>1 ? "Couche + repas"
-                             : kinds[0]==="couche" ? "Couche" : "Repas";
+    const nomRepas=(db.mode==="allaitement")?"Tétée":"Repas";
+    $("#eTitle").textContent = kinds.length>1 ? "Couche + "+nomRepas.toLowerCase()
+                             : kinds[0]==="couche" ? "Couche" : nomRepas;
     $("#eTime").value=toTimeInput(now);
     dayOptions(0);
     $("#eKinds").style.display="none";
@@ -1238,6 +1470,13 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(eKinds.includes(k)){ if(eKinds.length>1) eKinds=eKinds.filter(x=>x!==k); }
     else eKinds.push(k);
     $$(".kchip").forEach(x=>x.setAttribute("aria-pressed",eKinds.includes(x.dataset.k)));
+  }));
+
+  $$(".mchip").forEach(c=>c.addEventListener("click",()=>{
+    eMeal.type=c.dataset.m;
+    if(eMeal.type==="sein") eMeal.ml=null;
+    else if(eMeal.ml==null) eMeal.ml=(doseParBiberon()||20);
+    paintDetails();
   }));
 
   $$(".dchip").forEach(c=>c.addEventListener("click",()=>{
@@ -1597,6 +1836,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(v.weight==null&&db.weight) push("weight",db.weight);
     if(v.bottles==null&&db.bottles) push("bottles",db.bottles);
     if(v.dose==null&&db.dose) push("dose",db.dose);
+    if(v.mode==null) push("mode",db.mode);
   }
 
   let connectTimer=null;
@@ -1652,7 +1892,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     if(c.length<4){ stateEl.textContent="Choisissez un code d'au moins 4 caractères, identique sur les deux téléphones."; return; }
     codeInput.value=c; connect(c);
   });
-  badge.addEventListener("click",()=>{ tab(1); $("#share").scrollIntoView({block:"center"}); });
+  badge.addEventListener("click",()=>openPanel("sync"));
 
   (function(){
     let saved=""; try{ saved=localStorage.getItem(SPACE_KEY)||""; }catch(e){}
@@ -1668,6 +1908,122 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
 
 
+
+
+  /* ================= MODE DE SUIVI ================= */
+  const MODES={
+    biberon:{ nom:"Biberon",
+      desc:"Chaque repas est un biberon, avec sa quantité en ml. Jauge en volume sur la ration du jour.",
+      ml:true, tetee:false },
+    allaitement:{ nom:"Allaitement",
+      desc:"Chaque repas est une tétée : on compte les prises et leur durée, sans quantité.",
+      ml:false, tetee:true },
+    mixte:{ nom:"Mixte",
+      desc:"Biberon et sein dans la même journée. Le type est demandé à chaque repas.",
+      ml:true, tetee:true },
+    diversification:{ nom:"Diversification",
+      desc:"Lait et repas solides suivis ensemble, à partir de 4 mois environ.",
+      ml:true, tetee:true, soon:true }
+  };
+  if(!MODES[db.mode]) db.mode="biberon";
+  const M=()=>MODES[db.mode]||MODES.biberon;
+  const useMl=()=>M().ml;                       // la quantité est suivie
+  const askType=()=>db.mode==="mixte";          // le type est demandé à chaque repas
+  const countAll=()=>db.mode!=="biberon";       // hors mode biberon pur, toute prise compte
+
+  // Alban a-t-il l'âge de la diversification ?
+  const ageMois=()=> db.birth ? (Date.now()-db.birth)/(30.44*864e5) : null;
+
+
+  /* ================= PAGE RÉGLAGES ================= */
+  function pageOpen(on){ document.body.classList.toggle("pageopen",!!on); }
+  const anyPage=()=>["#set","#setSub","#stats","#tm"].some(k=>$(k)&&$(k).classList.contains("open"));
+
+  $("#fab").addEventListener("click",()=>{ paintSettings(); $("#set").classList.add("open"); pageOpen(true); });
+  $("#setBack").addEventListener("click",()=>{ $("#set").classList.remove("open"); pageOpen(anyPage()); });
+  const closeSub=()=>{ $("#setSub").classList.remove("open"); paintSettings(); };
+  $("#subBack").addEventListener("click",closeSub);
+  $("#setSub").addEventListener("click",ev=>{ if(ev.target===$("#setSub")) closeSub(); });
+
+  const PAN={mode:"Mode de suivi", sync:"Partage à deux", data:"Sauvegarde et restauration", notif:"Rappels"};
+  function openPanel(key){
+    $$(".spanel").forEach(x=>x.hidden = x.id!=="pan-"+key);
+    $("#subTitle").textContent=PAN[key]||"";
+    if(key==="mode") paintModes();
+    $("#setSub").classList.add("open");
+  }
+  $$(".slink[data-pan]").forEach(b=>b.addEventListener("click",()=>openPanel(b.dataset.pan)));
+  $("#lkRation").addEventListener("click",openTarget);
+
+  function paintSettings(){
+    $("#lkMode").textContent=M().nom;
+    $("#lkRationV").textContent = useMl()
+      ? (db.target? db.target+" ml · "+(db.bottles||"–")+"/j" : "à régler")
+      : (db.bottles? db.bottles+" tétées/j" : "à régler");
+    $("#lkSync").textContent = remote ? "reliée" : "locale";
+    $("#lkNotif").textContent = (("Notification" in window) && Notification.permission==="granted") ? "actifs" : "inactifs";
+    $("#lkData").textContent = db.entries.length+" entrées";
+    $("#ver2").textContent="v"+VERSION;
+  }
+
+  /* --- choix du mode --- */
+  let pendingMode=null;
+  function paintModes(){
+    const box=$("#modeList"); box.innerHTML="";
+    Object.keys(MODES).forEach(k=>{
+      const m=MODES[k], b=document.createElement("button");
+      b.className="mode"; b.type="button";
+      b.setAttribute("aria-pressed", k===db.mode);
+      if(m.soon) b.disabled=true;
+      b.innerHTML='<span class="dotsel"></span><span><span class="mt">'+m.nom+'</span>'+
+                  '<span class="md">'+m.desc+'</span></span>'+(m.soon?'<span class="soon">bientôt</span>':'');
+      if(!m.soon) b.addEventListener("click",()=>askMode(k));
+      box.appendChild(b);
+    });
+    const a=ageMois();
+    $("#modeHint").textContent = (a!=null && a>=4)
+      ? "Alban a "+Math.floor(a)+" mois : la diversification arrive dans une prochaine version."
+      : (a!=null ? "La diversification sera proposée vers 4 mois." : "");
+  }
+
+  function askMode(k){
+    if(k===db.mode) return;
+    pendingMode=k;
+    const from=M(), to=MODES[k];
+    const bits=[];
+    if(from.ml && !to.ml) bits.push("La jauge passe du volume au <b>nombre de tétées</b>. Les quantités déjà saisies restent enregistrées et réapparaîtront si vous revenez à un mode biberon.");
+    if(!from.ml && to.ml) bits.push("La jauge repasse en <b>millilitres</b>. Pensez à régler la ration journalière.");
+    if(k==="mixte") bits.push("Chaque repas demandera d'abord <b>biberon, sein ou les deux</b>.");
+    if(k==="biberon") bits.push("Chaque repas sera enregistré comme un <b>biberon</b>, sans question de type.");
+    if(k==="allaitement") bits.push("Le minuteur devient la mesure principale : plus de champ de quantité.");
+    bits.push("Les statistiques changent d'axe, mais <b>aucune entrée n'est supprimée ni modifiée</b>.");
+    bits.push("Le changement s'applique aussi sur l'autre téléphone.");
+    $("#mTitle").textContent="Passer en mode "+to.nom+" ?";
+    $("#mBody").innerHTML="<ul><li>"+bits.join("</li><li>")+"</li></ul>";
+    $("#mconf").classList.add("open");
+  }
+  $("#mCancel").addEventListener("click",()=>{ pendingMode=null; $("#mconf").classList.remove("open"); });
+  $("#mconf").addEventListener("click",ev=>{ if(ev.target===$("#mconf")){ pendingMode=null; $("#mconf").classList.remove("open"); } });
+  $("#mOk").addEventListener("click",()=>{
+    if(!pendingMode) return;
+    db.mode=pendingMode; pendingMode=null;
+    saveLocal(); push("mode",db.mode);
+    $("#mconf").classList.remove("open");
+    applyMode(); paintModes(); paintSettings();
+  });
+
+  /* --- répercussion du mode sur l'interface --- */
+  function applyMode(){
+    const ml=useMl();
+    $("#gLabel").textContent = ml ? "Lait aujourd'hui" : "Tétées aujourd'hui";
+    const vol=document.querySelector('#stMetric [data-m="ml"]');
+    if(vol) vol.textContent = ml ? "Volume" : "Tétées";
+    $$(".log-btn .n").forEach(n=>{
+      if(n.parentElement.dataset.kind==="manger") n.textContent = (db.mode==="allaitement") ? "Tétée" : "Manger";
+    });
+    if(!ml && stMetric==="ml") stSel=null;
+    renderTab1();
+  }
 
   /* ================= IDENTITÉ & TIME MACHINE ================= */
   const PHOTOS_KEY="suivi.photos", RELANCE=14*864e5;
@@ -1791,10 +2147,10 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   $("#stack").addEventListener("click",ev=>{
     if(!photos.length) return;            // l'input superposé ouvre le sélecteur
     tmIndex=photos.length-1;
-    $("#tm").classList.add("open");
+    $("#tm").classList.add("open"); pageOpen(true);
     renderTM(true);
   });
-  $("#tmBack").addEventListener("click",()=>$("#tm").classList.remove("open"));
+  $("#tmBack").addEventListener("click",()=>{ $("#tm").classList.remove("open"); pageOpen(anyPage()); });
 
   const STEP=46;
   let pos=0, dragging=false, animId=null, settleTimer=null;
@@ -1984,7 +2340,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       const k=sod(new Date(e.ts));
       const t=(e.meal&&e.meal.type)||"biberon";
       map[k]=(map[k]||0)+((e.meal&&e.meal.ml)||0);
-      cnt[k]=(cnt[k]||0)+((t==="biberon"||t==="both")?1:0);
+      cnt[k]=(cnt[k]||0)+((countAll()||t==="biberon"||t==="both")?1:0);
       if(e.meal&&e.meal.dur){ dsum[k]=(dsum[k]||0)+e.meal.dur; dn[k]=(dn[k]||0)+1; }
     });
     return {ml:map,bot:cnt,dsum,dn};
@@ -1995,7 +2351,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     delete D.ml[sod(new Date())]; delete D.bot[sod(new Date())];
     delete D.dsum[sod(new Date())]; delete D.dn[sod(new Date())];
     const dur = stMetric==="dur";
-    const daily = dur ? D.dsum : D.ml;
+    const cnt = (stMetric==="ml") && !useMl();   // en allaitement, on compte les tétées
+    const daily = dur ? D.dsum : (cnt ? D.bot : D.ml);
     const bot   = dur ? D.dn   : D.bot;
     const keys=Object.keys(daily).map(Number).sort((a,b)=>a-b);
     if(!keys.length) return [];
@@ -2058,13 +2415,16 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
         '<div class="sub">'+b.full+' · durée moyenne par biberon chronométré</div>';
       return;
     }
-    const t=db.target||0, d=t?b.val-t:null;
+    const cnt=!useMl();
+    const t=(cnt?(db.bottles||0):(db.target||0)), d=t?b.val-t:null;
     const unit=gran()==="day"?"":" en moyenne par jour";
-    const bt = gran()==="day" ? b.bot+" 🍼" : b.bot+" 🍼 sur la période";
+    const ic=(db.mode==="allaitement")?" 🤱":(db.mode==="mixte"?" repas":" 🍼");
+    const bt = gran()==="day" ? b.bot+ic : b.bot+ic+" sur la période";
     $("#stRead").innerHTML=
-      '<div class="big mono">'+b.val+' ml <span style="font-size:15px;color:var(--graphite)">· '+bt+'</span></div>'+
+      '<div class="big mono">'+b.val+(cnt?" tétées":" ml")+
+      (cnt?"":' <span style="font-size:15px;color:var(--graphite)">· '+bt+'</span>')+'</div>'+
       '<div class="sub">'+b.full+unit+
-      (d===null?"":' · <span class="delta '+(d>=0?"up":"down")+'">'+(d>=0?"+":"")+d+' ml vs cible</span>')+
+      (d===null?"":' · <span class="delta '+(d>=0?"up":"down")+'">'+(d>=0?"+":"")+d+(cnt?" vs objectif":" ml vs cible")+'</span>')+
       '</div>';
   }
 
@@ -2183,7 +2543,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     $("#rhythm").hidden=!rhythmView;
     $("#chartWrap").style.display=rhythmView?"none":"";
     if(rhythmView){ renderRhythm(); return; }
-    const list=buckets(), target=(stMetric==="ml")?(db.target||0):0;
+    const cntMode=(stMetric==="ml")&&!useMl();
+    const list=buckets(), target=(stMetric!=="ml")?0:(cntMode?(db.bottles||0):(db.target||0));
     if(!list.length){
       $("#bars").innerHTML=""; $("#stSum").innerHTML="";
       $("#stRead").innerHTML='<div class="sub">'+(stMetric==="dur"
@@ -2198,7 +2559,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     $("#bars").innerHTML=list.map((b,i)=>
       '<div class="bwrap'+(stSel===b.key?" hit":"")+'" data-b="'+b.key+'">'+
       '<div class="bval">'+(b.val||"")+'</div>'+
-      '<div class="bbot">'+(b.bot? b.bot+(stMetric==="dur"?"⏱":"🍼") : "")+'</div>'+
+      '<div class="bbot">'+(b.bot? b.bot+(stMetric==="dur"?"⏱":(useMl()?"🍼":"🤱")) : "")+'</div>'+
       '<div class="bar'+(b.val===0?" none":(target&&b.val>=target?" over":""))+'" style="height:'+Math.max(2,px(b.val))+'px"></div>'+
       '<div class="blab">'+b.lab+'</div></div>').join("");
 
@@ -2211,7 +2572,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
       $("#tline").style.display="none";
     }
 
-    const u = stMetric==="dur" ? " min" : " ml";
+    const u = stMetric==="dur" ? " min" : (cntMode ? " tétées" : " ml");
     const vals=list.filter(b=>b.val>0).map(b=>b.val);
     const moy=vals.length?Math.round(vals.reduce((a,c)=>a+c,0)/vals.length):0;
     const best=vals.length?Math.max(...vals):0;
@@ -2227,7 +2588,9 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     $("#stNote").textContent = stMetric==="dur"
       ? "Durée moyenne d'un biberon chronométré. Seules les prises enregistrées avec le minuteur apparaissent ici."
       : (gran()==="day"
-        ? "Total bu par jour. La ligne rouge est la ration cible actuelle ("+(target||"non réglée")+(target?" ml":"")+")."
+        ? (cntMode
+            ? "Nombre de tétées par jour. La ligne rouge est l'objectif ("+(target||"non réglé")+(target?" tétées":"")+")."
+            : "Total bu par jour. La ligne rouge est la ration cible actuelle ("+(target||"non réglée")+(target?" ml":"")+").")
         : "Moyenne quotidienne par "+(gran()==="week"?"semaine":"mois")+", comparable à la cible journalière. Les jours sans entrée comptent pour zéro.");
 
     $$("#bars .bwrap").forEach(w=>w.addEventListener("click",()=>{
@@ -2242,8 +2605,8 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
     setTimeout(()=>{ $("#chart").scrollLeft=$("#chart").scrollWidth; },0);
   }
 
-  $("#statsOpen").addEventListener("click",()=>{ stSel=null; $("#stats").classList.add("open"); renderStats(); });
-  $("#stBack").addEventListener("click",()=>$("#stats").classList.remove("open"));
+  $("#statsOpen").addEventListener("click",()=>{ stSel=null; $("#stats").classList.add("open"); pageOpen(true); renderStats(); });
+  $("#stBack").addEventListener("click",()=>{ $("#stats").classList.remove("open"); pageOpen(anyPage()); });
   $$("#stSeg button").forEach(b=>b.addEventListener("click",()=>{
     stRange=+b.dataset.r; stSel=null; renderStats();
   }));
@@ -2290,6 +2653,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   }
 
   function buildAdvice(){
+    if(!useMl()) return null;                   // sans quantité, rien à doser
     const T=db.target||0, N=db.bottles||0;
     if(!T||!N) return null;
     const list=mealsToday();
@@ -2391,15 +2755,15 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
 
   function todayMeals(){
     const t0=sod(new Date()), t1=t0+864e5;
-    const r={ml:0,bottles:0,day:{ml:0,bottles:0},night:{ml:0,bottles:0}};
+    const r={ml:0,bottles:0,dur:0,day:{ml:0,bottles:0},night:{ml:0,bottles:0}};
     db.entries.forEach(e=>{
       if(!e.kinds.includes("manger")) return;
       if(e.ts<t0||e.ts>=t1) return;
       const type=(e.meal&&e.meal.type)||"biberon";
       const ml=(e.meal&&e.meal.ml)||0;
-      const b=(type==="biberon"||type==="both")?1:0;
+      const b=(countAll()||type==="biberon"||type==="both")?1:0;
       const slot=isNight(e.ts)?r.night:r.day;
-      r.ml+=ml; r.bottles+=b; slot.ml+=ml; slot.bottles+=b;
+      r.ml+=ml; r.bottles+=b; r.dur+=(e.meal&&e.meal.dur)||0; slot.ml+=ml; slot.bottles+=b;
     });
     return r;
   }
@@ -2419,28 +2783,41 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   }
 
   function renderGauge(){
-    const gr=todayMeals(), done=gr.ml, bottles=gr.bottles, target=db.target||0;
-    $("#gCount").innerHTML = bottles+"<span>/"+(db.bottles||"–")+" 🍼</span>";
+    const gr=todayMeals(), target=db.target||0;
+    const icone = (db.mode==="allaitement") ? " 🤱" : (db.mode==="mixte" ? " repas" : " 🍼");
+    $("#gCount").innerHTML = gr.bottles+"<span>/"+(db.bottles||"–")+icone+"</span>";
     applyTheme();
     const nuit=isNight(Date.now());
     $("#gauge").classList.toggle("night",nuit);
     $("#gPhase").textContent = nuit ? "🌙 Nuit" : "Jour";
 
-    const dose=doseParBiberon();
-    $("#gDose").innerHTML = dose ? "Dose repère : <b>"+dose+" ml</b> par biberon" : "";
-    $("#gDone").textContent=done;
-    $("#gTarget").textContent = target? "/ "+target+" ml" : "ml";
-    const pct = target? Math.min(100, Math.round(done/target*100)) : 0;
-    $("#gFill").style.width=pct+"%";
-    $("#gauge").classList.toggle("over", target>0 && done>target);
-    if(!target){
-      $("#gNote").textContent="Touchez pour définir la ration journalière.";
-    }else if(done>target){
-      $("#gNote").textContent=(done-target)+" ml au-dessus de l'objectif.";
+    if(useMl()){
+      const done=gr.ml, dose=doseParBiberon();
+      $("#gDose").innerHTML = dose ? "Dose repère : <b>"+dose+" ml</b> par biberon" : "";
+      $("#gDone").textContent=done;
+      $("#gTarget").textContent = target? "/ "+target+" ml" : "ml";
+      const pct = target? Math.min(100, Math.round(done/target*100)) : 0;
+      $("#gFill").style.width=pct+"%";
+      $("#gauge").classList.toggle("over", target>0 && done>target);
+      $("#gNote").textContent = !target ? "Touchez pour définir la ration journalière."
+        : done>target ? (done-target)+" ml au-dessus de l'objectif."
+        : (target-done)+" ml restants · "+pct+" %";
     }else{
-      $("#gNote").textContent=(target-done)+" ml restants · "+pct+" %";
+      // allaitement : la mesure est le nombre de tétées et leur durée
+      const cible=db.bottles||0, n=gr.bottles;
+      const mins=Math.round(gr.dur/60);
+      $("#gDose").innerHTML = mins ? "Durée totale aujourd'hui : <b>"+mins+" min</b>" : "";
+      $("#gDone").textContent=n;
+      $("#gTarget").textContent = cible? "/ "+cible+" tétées" : "tétées";
+      const pct = cible? Math.min(100, Math.round(n/cible*100)) : 0;
+      $("#gFill").style.width=pct+"%";
+      $("#gauge").classList.toggle("over", cible>0 && n>cible);
+      $("#gNote").textContent = !cible ? "Touchez pour définir le nombre de tétées visé."
+        : n>cible ? (n-cible)+" tétée"+((n-cible)>1?"s":"")+" de plus que prévu."
+        : (cible-n)+" restante"+((cible-n)>1?"s":"")+" · "+pct+" %";
     }
   }
+
 
   let doseTouched=false;
   function paintDose(){
@@ -2564,6 +2941,12 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   $("#tAnalyze").addEventListener("click",()=>paintAnalysis(analyzeRhythm(5)));
 
   function openTarget(){
+    const ml=useMl();
+    $$(".mlonly").forEach(x=>x.hidden=!ml);
+    $("#tHead").textContent = ml ? "Ration journalière" : "Rythme des tétées";
+    const mixte=db.mode==="mixte";
+    $("#tBotLab").textContent = !ml ? "Tétées par jour" : (mixte ? "Repas par jour" : "Biberons par jour");
+    $("#tBotUnit").textContent = ml ? "total" : "🤱 total";
     $("#tWeight").value = db.weight||"";
     $("#tTarget").value = db.target||"";
     $$("#tConst button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.k===db.appert));
@@ -2785,7 +3168,7 @@ const DATABASE_URL = "https://alban-tracking-default-rtdb.europe-west1.firebased
   const now=new Date();
   $("#tTime").value=pad(now.getHours())+":"+pad(now.getMinutes());
   renderTab1(); renderTasks();
-  applyTheme();
+  applyTheme(); applyMode(); paintSettings();
   setInterval(()=>{applyTheme();renderNext();renderTasks();},30000);
 })();
 </script></body></html>
